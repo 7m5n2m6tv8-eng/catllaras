@@ -1,7 +1,15 @@
 // Genera camins.js (camins d'OpenStreetMap al voltant de la ruta) i orientacio.js
 // (solell / obaga de cada tram a partir d'un model d'elevacions).
 // S'executa a GitHub Actions (.github/workflows/dades.yml) o en local amb: node tools/genera-dades.mjs
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync as escriu, existsSync } from "node:fs";
+// Només es reescriu el fitxer si canvien les dades (no només la data de generació): evita commits buits.
+function writeFileSync(url, txt) {
+  if (existsSync(url)) {
+    const vell = readFileSync(url, "utf8"), m = vell.match(/(\d{4}-\d{2}-\d{2})/);
+    if (m && txt.split(avui).join(m[1]) === vell) { console.log("Sense canvis:", url.pathname.split("/").pop()); return; }
+  }
+  escriu(url, txt);
+}
 import vm from "node:vm";
 
 const ROOT = new URL("../", import.meta.url);
