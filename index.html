@@ -72,7 +72,7 @@ ul{padding-left:18px;margin:6px 0}li{margin:3px 0}
 .tag{display:inline-block;font-size:11px;font-weight:700;border-radius:5px;padding:1px 6px;background:var(--warn);color:#1a1000;margin-left:4px}
 .small{font-size:13px}
 .fblk{margin:0 0 10px}.fblk+.fblk{border-top:1px solid var(--line);padding-top:10px}
-.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px}.g4>div{background:var(--card2);border-radius:10px;padding:6px 8px}
+.g4{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}.g4>div{background:var(--card2);border-radius:10px;padding:6px 8px}
 .g4 b{display:block;font-size:18px;font-variant-numeric:tabular-nums;line-height:1.2}.g4 span{font-size:11px;color:var(--mut)}
 .expl{background:var(--card2);border-radius:8px;padding:8px 10px;margin-top:6px}
 .expl .q{border-left:3px solid var(--blue);padding-left:8px;margin:6px 0 0}
@@ -318,7 +318,7 @@ function renderFalta(pr,late,n){
   const ps=dayPts(day), fi=ps[ps.length-1], nxt=ps.find(p=>routeKm(p)>pr.m+20);
   const fila=(nom,p)=>{ const km=(routeKm(p)-pr.m)/1000, z=dzEntre(pr.m,routeKm(p),day), dt=Math.max(0,toMin(p.t)-planAt(pr.m,day)), arr=n+dt;
     return `<div class="fblk"><div class="hd"><span class="code">${esc(p.c)}</span> <b>${esc(p.n)}</b> <span class="mut small">· ${nom}</span></div>
-      <div class="g4"><div><b>${km.toFixed(2).replace(".",",")}</b><span>km</span></div><div><b>+${z.up}</b><span>−${z.dn} m</span></div><div><b>${fmtDur(dt)}</b><span>temps</span></div><div><b>${fmtMin(arr)}</b><span>arribada</span></div></div></div>`; };
+      <div class="g4"><div><b>${km.toFixed(2).replace(".",",")} km</b><span>distància</span></div><div><b>+${z.up} / −${z.dn} m</b><span>desnivell</span></div><div><b>${fmtDur(dt)}</b><span>temps</span></div><div><b>${fmtMin(arr)}</b><span>arribada</span></div></div></div>`; };
   if (!nxt){ el.className="small"; el.innerHTML="<b>Final de l'etapa.</b>"; return; }
   el.className="small";
   el.innerHTML=`${fila("pròxim punt",nxt)}${nxt!==fi?fila("final del dia",fi):""}
@@ -608,7 +608,7 @@ document.addEventListener("visibilitychange",()=>{ if (wakeOn && document.visibi
 <script>
 // ---------------- INIT ----------------
 if (store.get("light",false)) document.body.classList.add("light");
-$("#verTxt").textContent = "Versió de l'app: v6 (quadre «Falta»: km, desnivell, temps i arribada, guia d'interpretació per punts i temes, desnivells i horaris del reconeixement del 21/11, mapa ICGC offline, camins OSM, meteo Open-Meteo, llum calculada).";
+$("#verTxt").textContent = "Versió de l'app: v7 (quadre «Falta»: km, desnivell, temps i arribada, guia d'interpretació per punts i temes, desnivells i horaris del reconeixement del 21/11, mapa ICGC offline, camins OSM, meteo Open-Meteo, llum calculada).";
 renderStatic(); pintaWake(); mapa.init(); meteo.init(); setDay(day); setInterval(tick, 15000);
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
   navigator.serviceWorker.register("sw.js").catch(function(){});
