@@ -12,14 +12,18 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: dades
+  cancel-in-progress: true
+
 jobs:
   genera:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
       - run: node tools/genera-dades.mjs
       - name: Desa els fitxers generats
         run: |
@@ -28,4 +32,5 @@ jobs:
           git add camins.js orientacio.js
           if git diff --cached --quiet; then echo "Sense canvis"; exit 0; fi
           git commit -m "Actualitza camins OSM i orientació dels trams"
+          git pull --rebase origin main
           git push
