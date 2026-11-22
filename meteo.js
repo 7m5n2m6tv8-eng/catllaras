@@ -22,21 +22,24 @@ const meteo = (() => {
   async function carrega(manual) {
     if (carregant) return;
     if (!manual && MET && Date.now() - MET.ts < maxEdat()) return pinta();
-    if (!navigator.onLine) { pinta(); return; }
-    carregant = true; $("#metAct").textContent = "Actualitzant…";
+    const estat = (txt) => { $("#metAct").innerHTML = txt; const e = $("#metAraAct"); if (e) e.innerHTML = txt; };
+    if (!navigator.onLine) { pinta(); if (manual) estat(`<span class="warn">Sense cobertura.</span> ${MET ? "Es mostra la meteo de " + edatTxt() + "." : ""}`); return; }
+    carregant = true; estat("Actualitzant…"); document.querySelectorAll("#metBtn,#metAraBtn").forEach(b => b.disabled = true);
     const u = "https://api.open-meteo.com/v1/forecast?latitude=" + PTS_MET.map(p => p.lat).join(",") + "&longitude=" + PTS_MET.map(p => p.lon).join(",") +
-      "&elevation=" + PTS_MET.map(p => p.e).join(",") + "&hourly=" + VARS + "&daily=sunrise,sunset&timezone=Europe%2FMadrid&forecast_days=16&wind_speed_unit=kmh";
+      "&elevation=" + PTS_MET.map(p => p.e).join(",") + "&hourly=" + VARS + "&current=temperature_2m,apparent_temperature,precipitation,weather_code,cloud_cover,wind_speed_10m,wind_gusts_10m,wind_direction_10m&daily=sunrise,sunset&timezone=Europe%2FMadrid&forecast_days=16&wind_speed_unit=kmh";
     try {
       const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 25000);
       const r = await fetch(u, {signal: ctl.signal}); clearTimeout(to);
       if (!r.ok) throw new Error(r.status);
       const j = await r.json(), arr = Array.isArray(j) ? j : [j];
-      MET = {ts: Date.now(), pts: arr.map(x => ({h: x.hourly, d: x.daily}))};
+      MET = {ts: Date.now(), pts: arr.map(x => ({h: x.hourly, d: x.daily, c: x.current}))};
       store.set(KEY, MET);
     } catch (e) {
-      carregant = false; pinta(); $("#metAct").innerHTML = `<span class="warn">No s'ha pogut actualitzar.</span> ${MET ? "Es mostra la previsió de " + edatTxt() + "." : ""}`; return;
+      carregant = false; document.querySelectorAll("#metBtn,#metAraBtn").forEach(b => b.disabled = false);
+      pinta(); estat(`<span class="warn">No s'ha pogut actualitzar.</span> ${MET ? "Es mostra la meteo de " + edatTxt() + "." : ""}`); return;
     }
-    carregant = false; pinta(); tick();
+    carregant = false; document.querySelectorAll("#metBtn,#metAraBtn").forEach(b => b.disabled = false);
+    pinta(); tick(); const e = $("#metAraAct"); if (e) e.textContent = "Actualitzada ara mateix.";
   }
 
   function idx(dataIso, min) { // índex horari més proper a l'hora (minuts) d'aquell dia
@@ -104,6 +107,7 @@ const meteo = (() => {
   return {
     init() {
       $("#metBtn").onclick = () => carrega(true);
+      $("#metAraBtn").onclick = () => carrega(true);
       $("#metDia").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; sel = b.dataset.v === "avui" ? "avui" : +b.dataset.v; pinta(); });
       window.addEventListener("online", () => carrega(false));
       pinta(); carrega(false);
@@ -111,10 +115,18 @@ const meteo = (() => {
     // targeta «Meteo» de la pantalla Ara: l'hora actual a la cota on ets
     ara() {
       const el = $("#metAraBody"); if (!el) return;
-      if (!MET) { el.className = "mut small"; el.textContent = "Sense previsió desada. Obre «Info» amb cobertura i prem «Actualitzar previsió»."; return; }
+      if (!MET) { el.className = "mut small"; el.textContent = "Sense previsió desada. Prem «Actualitzar meteo ara» amb cobertura."; return; }
       const now = new Date(), i = idx(iso(now), now.getHours() * 60 + now.getMinutes());
       const alt = gps && gps.alt != null ? gps.alt : gps && gps.snap ? gps.snap.ele : (dayPts(day)[0] || {}).cota || 1372;
-      const v = a(i, alt);
+      let v = a(i, alt), font = "previsió per a aquesta hora";
+      const C0 = MET.pts[0].c;
+      if (C0 && v && Date.now() - MET.ts < 90 * 60e3) { // condicions actuals del model, interpolades per altitud
+        const E = PTS_MET.map(p => p.e), P = MET.pts; let lo = 0, hi = 1; if (alt > E[1]) { lo = 1; hi = 2; }
+        const f = Math.max(0, Math.min(1, (alt - E[lo]) / (E[hi] - E[lo]))), g = k => { const x = P[lo].c[k], y = P[hi].c[k]; return x == null || y == null ? (x ?? y) : x + (y - x) * f; };
+        const prop = f < .5 ? lo : hi;
+        v = {...v, t: g("temperature_2m"), at: g("apparent_temperature"), ws: g("wind_speed_10m"), wg: g("wind_gusts_10m"), wd: P[prop].c.wind_direction_10m, pr: g("precipitation"), cc: g("cloud_cover"), code: P[prop].c.weather_code};
+        font = "ara mateix (" + String(C0.time).slice(11, 16) + ")";
+      }
       if (!v) { el.className = "mut small"; el.textContent = "La previsió desada no cobreix l'hora actual."; return; }
       const av = avisos(v, alt);
       el.className = "small";
@@ -124,7 +136,7 @@ const meteo = (() => {
         <div class="kv"><b>${Math.round(v.pp ?? 0)} %</b><span>prob. pluja · ${v.pr.toFixed(1)} mm/h</span></div>
         <div class="kv"><b>${v.fz == null ? "–" : Math.round(v.fz / 50) * 50 + " m"}</b><span>cota 0 °C · ${WMO[v.code] || ""}</span></div></div>
         ${av.length ? `<p style="margin:8px 0 0">${av.map(x => `<b class="${x[0]}">${x[1]}</b>`).join(" · ")}</p>` : ""}
-        <p class="mut" style="margin:6px 0 0">Model Open-Meteo, actualitzat ${edatTxt()}. Mana el que veus al terreny.</p>`;
+        <p class="mut" style="margin:6px 0 0">Model Open-Meteo, ${font}, baixat ${edatTxt()}. Mana el que veus al terreny.</p>`;
     },
     // avisos per a la pantalla Ara a partir de la previsió del dia de la sortida que es mira
     alertes(d) {

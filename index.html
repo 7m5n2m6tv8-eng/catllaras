@@ -141,7 +141,8 @@ details.tema h4{margin:8px 0 2px;font-size:14px}details.tema p{margin:4px 0}
   </div>
   <div class="card" id="metAra">
     <h2>Meteo</h2>
-    <div id="metAraBody" class="mut small">Sense previsió desada. Obre «Info» amb cobertura i actualitza-la.</div>
+    <div id="metAraBody" class="mut small">Sense previsió desada. Prem «Actualitzar meteo ara» amb cobertura.</div>
+    <div class="row" style="margin-top:8px"><button class="btn sm ac" id="metAraBtn">Actualitzar meteo ara</button><span class="small mut" id="metAraAct"></span></div>
   </div>
   <div class="card" id="targetCard" style="display:none">
     <h2>Navegar a</h2>
@@ -230,7 +231,7 @@ details.tema h4{margin:8px 0 2px;font-size:14px}details.tema p{margin:4px 0}
   <div class="card"><h2>Horari</h2><div id="horari"></div></div>
   <div class="card" id="metCard"><h2>Previsió meteo per punts</h2>
     <div class="seg" id="metDia"></div>
-    <div class="row" style="margin-bottom:8px"><button class="btn sm" id="metBtn">Actualitzar previsió</button><span class="small mut" id="metAct"></span></div>
+    <div class="row" style="margin-bottom:8px"><button class="btn sm ac" id="metBtn">Actualitzar meteo ara</button><span class="small mut" id="metAct"></span></div>
     <div id="metBody" class="small mut">Sense previsió desada.</div>
     <p class="small mut" style="margin:8px 0 0">Open-Meteo, a l'hora prevista de pas per cada punt i interpolada per altitud entre P0 (916 m), el Xalet (1372 m) i P5 (1563 m). En vermell i taronja, els llindars de la fitxa. És un model: contrasta-ho amb l'SMC i AEMET.</p>
   </div>
@@ -628,7 +629,7 @@ document.addEventListener("visibilitychange",()=>{ if (wakeOn && document.visibi
 <script>
 // ---------------- INIT ----------------
 if (store.get("light",false)) document.body.classList.add("light");
-$("#verTxt").textContent = "Versió de l'app: v10 (plans B i C al mapa i per seguir-los, quadre «Falta»: km, desnivell, temps i arribada, guia d'interpretació per punts i temes, desnivells i horaris del reconeixement del 21/11, mapa ICGC offline, camins OSM, meteo Open-Meteo, llum calculada).";
+$("#verTxt").textContent = "Versió de l'app: v11 (botó «Actualitzar meteo ara», plans B i C al mapa i per seguir-los, quadre «Falta»: km, desnivell, temps i arribada, guia d'interpretació per punts i temes, desnivells i horaris del reconeixement del 21/11, mapa ICGC offline, camins OSM, meteo Open-Meteo, llum calculada).";
 renderStatic(); pintaWake(); mapa.init(); meteo.init(); pla.init(); setDay(day); setInterval(tick, 15000);
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
   navigator.serviceWorker.register("sw.js").then(function(reg){
