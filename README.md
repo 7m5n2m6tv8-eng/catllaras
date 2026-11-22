@@ -32,7 +32,7 @@ Es generen sols amb GitHub Actions (`.github/workflows/dades.yml`) cada vegada q
 
 ## Publicar canvis
 
-Canvieu `CACHE` a `sw.js` (p. ex. `catllaras-v6`) perquè els mòbils baixin la versió nova. El mapa desat no s'esborra.
+Canvieu `CACHE` a `sw.js` (p. ex. `catllaras-v9`). L'app es baixa de fons quan hi ha cobertura i mostra el botó «Actualitzar» quan hi ha una versió nova. El mapa desat no s'esborra.
 
 ## Fonts i llicències
 

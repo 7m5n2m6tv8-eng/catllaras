@@ -2,7 +2,7 @@
 // - CACHE: l'app (canvieu el número de versió quan pugeu canvis perquè els mòbils baixin la nova).
 // - TILES: teselles del mapa ICGC; NO s'esborren en actualitzar l'app.
 // - La previsió d'Open-Meteo no passa per aquí: l'app la desa al mòbil.
-const CACHE = "catllaras-v7";
+const CACHE = "catllaras-v8";
 const TILES = "catllaras-teselles-v1";
 const FILES = ["./", "./index.html", "./dades.js", "./interpretacio.js", "./camins.js", "./orientacio.js", "./mapa.js", "./meteo.js",
   "./img/mapa-fitxa.jpg", "./img/perfil-d1.jpg", "./img/perfil-d2.jpg",
@@ -27,10 +27,10 @@ self.addEventListener("fetch", e => {
   }
   if (url.origin !== location.origin) return; // Open-Meteo i altres: directe a la xarxa
   // Fitxers de l'app: primer la còpia desada (funciona sense cobertura).
-  e.respondWith(
-    caches.match(e.request, {ignoreSearch: true}).then(hit => hit || fetch(e.request).then(res => {
-      if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); }
-      return res;
-    }).catch(() => caches.match("./index.html")))
-  );
+  // Fitxers de l'app: es respon amb la còpia desada (funciona sense cobertura) i, si hi ha xarxa, s'actualitza de fons.
+  e.respondWith(caches.open(CACHE).then(c => c.match(e.request, {ignoreSearch: true}).then(hit => {
+    const xarxa = fetch(e.request).then(res => { if (res.ok) c.put(e.request, res.clone()); return res; }).catch(() => null);
+    if (hit) { e.waitUntil(xarxa); return hit; }
+    return xarxa.then(res => res || c.match("./index.html"));
+  })));
 });

@@ -287,7 +287,8 @@ function utm(lat,lon){ const a=6378137,f=1/298.257222101,k0=0.9996,e2=f*(2-f),ep
 
 // ---------------- ESTAT ----------------
 function autoDay(){ const d=new Date(); if (d.getMonth()===10 && d.getDate()===29) return 2; return 1; }
-let day = store.get("day", autoDay());
+const esSortida = (()=>{ const d=new Date(); return d.getFullYear()===2026 && d.getMonth()===10 && (d.getDate()===28||d.getDate()===29); })();
+let day = esSortida ? autoDay() : store.get("day", autoDay()); // els dies de la sortida mana la data
 let arr = store.get("arr", {}); // {"1:P3": minutes}
 let gps = null, watchId = null, lastKm = {1:null,2:null}, target = null;
 const TRK = TRACK; // [lat,lon,ele,cumMetres]
@@ -312,17 +313,19 @@ function dzEntre(m0,m1,d){ // desnivell previst entre dos punts del track (metre
     up += t.up*(tu>0?(cumAt(CUM.up,b)-cumAt(CUM.up,a))/tu:fr); dn += t.dn*(td>0?(cumAt(CUM.dn,b)-cumAt(CUM.dn,a))/td:fr); }
   return {up:Math.round(up), dn:Math.round(dn)};
 }
+// Hora d'arribada a un punt: des d'ara (GPS) o des de l'hora real de l'últim punt marcat, més el temps previst que falta.
+function arribadaA(p,pr,n){ const base = pr.src==="marca" ? arr[day+":"+pr.p.k] : n; const falta=Math.max(0,toMin(p.t)-planAt(pr.m,day)); return {arr:base+falta, falta:pr.src==="marca"?Math.max(0,base+falta-n):falta}; }
 function renderFalta(pr,late,n){
   const el=$("#faltaBody");
   if (!pr){ el.className="mut small"; el.textContent="Activa el GPS o marca a «Punts» l'últim punt per on heu passat."; return; }
   const ps=dayPts(day), fi=ps[ps.length-1], nxt=ps.find(p=>routeKm(p)>pr.m+20);
-  const fila=(nom,p)=>{ const km=(routeKm(p)-pr.m)/1000, z=dzEntre(pr.m,routeKm(p),day), dt=Math.max(0,toMin(p.t)-planAt(pr.m,day)), arr=n+dt;
+  const fila=(nom,p)=>{ const km=(routeKm(p)-pr.m)/1000, z=dzEntre(pr.m,routeKm(p),day), A=arribadaA(p,pr,n), dt=A.falta, arr=A.arr;
     return `<div class="fblk"><div class="hd"><span class="code">${esc(p.c)}</span> <b>${esc(p.n)}</b> <span class="mut small">· ${nom}</span></div>
       <div class="g4"><div><b>${km.toFixed(2).replace(".",",")} km</b><span>distància</span></div><div><b>+${z.up} / −${z.dn} m</b><span>desnivell</span></div><div><b>${fmtDur(dt)}</b><span>temps</span></div><div><b>${fmtMin(arr)}</b><span>arribada</span></div></div></div>`; };
   if (!nxt){ el.className="small"; el.innerHTML="<b>Final de l'etapa.</b>"; return; }
   el.className="small";
   el.innerHTML=`${fila("pròxim punt",nxt)}${nxt!==fi?fila("final del dia",fi):""}
-    <p class="mut" style="margin:6px 0 0">Temps amb el ritme del grup de la fitxa (parades i dinar inclosos)${pr.src==="marca"?", comptat des de l'últim punt marcat":""}. Arribada = ara + temps que falta.</p>`;
+    <p class="mut" style="margin:6px 0 0">Temps amb el ritme del grup de la fitxa (parades i dinar inclosos)${pr.src==="marca"?", comptat des de l'últim punt marcat":""}. Arribada = ${pr.src==="marca"?"hora de l'últim punt marcat":"ara"} + temps previst que falta.</p>`;
 }
 
 function planAt(m, d){
@@ -380,7 +383,7 @@ function tick(){
   // arribada al final del dia seguint el pla A amb el retard actual
   { const fi=ps[ps.length-1]; let lt=0;
     if (pr){ lt = pr.src==="marca" ? arr[day+":"+pr.p.k]-toMin(pr.p.t) : n-planAt(pr.m,day); }
-    const eta=toMin(fi.t)+Math.max(0,lt), marge=SAFEm-eta;
+    const eta=pr?arribadaA(fi,pr,n).arr:toMin(fi.t), marge=SAFEm-eta;
     $("#llumA").innerHTML = `Amb el pla A arribeu a <b>${esc(fi.c)}</b> cap a les <b>${fmtMin(eta)}</b>: <b class="${marge<0?"bad":marge<30?"warn":"ok"}">${marge<0?"falten "+fmtDur(-marge)+" de llum útil":"marge de "+fmtDur(marge)}</b> abans de les ${fmtMin(SAFEm)}.<br><span class="mut">Posta calculada per al ${L.txt}: ${fmtMin(SUNm)} (lloc segur 30 min abans).</span>`;
     if (pr && marge<0) alerts.push(["bad",`Amb el retard actual arribeu a ${fi.c} a les ${fmtMin(eta)}, després de les ${fmtMin(SAFEm)}: valorar el pla B o frontals.`]);
   }
@@ -394,7 +397,7 @@ function tick(){
     $("#delay").className = late>20?"bad":(late>5?"warn":"ok");
     const nxt = ps.find(p=>routeKm(p)>pr.m+20);
     if (nxt){
-      const distKm=(routeKm(nxt)-pr.m)/1000, eta=toMin(nxt.t)+Math.max(late,0)*(pr.src==="gps"?1:1);
+      const distKm=(routeKm(nxt)-pr.m)/1000, eta=arribadaA(nxt,pr,n).arr;
       const limLeft=toMin(nxt.l)-n;
       const prv = [...ps].reverse().find(p=>routeKm(p)<=pr.m+20), ori = prv?vessantTxt(day,prv):"";
       const obert=!!document.querySelector("#nextBody details[open]");
@@ -608,10 +611,17 @@ document.addEventListener("visibilitychange",()=>{ if (wakeOn && document.visibi
 <script>
 // ---------------- INIT ----------------
 if (store.get("light",false)) document.body.classList.add("light");
-$("#verTxt").textContent = "Versió de l'app: v7 (quadre «Falta»: km, desnivell, temps i arribada, guia d'interpretació per punts i temes, desnivells i horaris del reconeixement del 21/11, mapa ICGC offline, camins OSM, meteo Open-Meteo, llum calculada).";
+$("#verTxt").textContent = "Versió de l'app: v8 (quadre «Falta»: km, desnivell, temps i arribada, guia d'interpretació per punts i temes, desnivells i horaris del reconeixement del 21/11, mapa ICGC offline, camins OSM, meteo Open-Meteo, llum calculada).";
 renderStatic(); pintaWake(); mapa.init(); meteo.init(); setDay(day); setInterval(tick, 15000);
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
-  navigator.serviceWorker.register("sw.js").catch(function(){});
+  navigator.serviceWorker.register("sw.js").then(function(reg){
+    reg.addEventListener("updatefound", function(){ var w=reg.installing; if(!w) return;
+      w.addEventListener("statechange", function(){ if (w.state==="installed" && navigator.serviceWorker.controller) mostraNova(); }); });
+  }).catch(function(){});
+  function mostraNova(){ if (document.getElementById("nova")) return; var d=document.createElement("div"); d.id="nova"; d.className="alert ok";
+    d.style.cssText="position:fixed;left:12px;right:12px;bottom:76px;z-index:40;display:flex;gap:10px;align-items:center";
+    d.innerHTML='<span style="flex:1">Hi ha una versió nova de l\'app.</span><button class="btn sm ac">Actualitzar</button>';
+    d.querySelector("button").onclick=function(){ location.reload(); }; document.body.appendChild(d); }
 }
 </script>
 </body>

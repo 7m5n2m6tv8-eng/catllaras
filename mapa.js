@@ -90,7 +90,10 @@ const mapa = (() => {
   }
   function pintaCamins() {
     const m = CAMINS.ways, lw = Math.max(.6, Math.min(1.4, (Z - 11) / 4));
+    if (!m.bb) m.forEach(w => { const c = w[1]; let s = 9e9, n = -9e9, o = 9e9, e = -9e9; for (let i = 0; i < c.length; i += 2) { s = Math.min(s, c[i]); n = Math.max(n, c[i]); o = Math.min(o, c[i + 1]); e = Math.max(e, c[i + 1]); } w.bb = [s / 1e5, o / 1e5, n / 1e5, e / 1e5]; }), m.bb = true;
+    const latN = latOf(wy(cLat, Z) - H / 2, Z), latS = latOf(wy(cLat, Z) + H / 2, Z), lonW = lonOf(wx(cLon, Z) - W / 2, Z), lonE = lonOf(wx(cLon, Z) + W / 2, Z);
     for (const w of m) {
+      if (w.bb[2] < latS || w.bb[0] > latN || w.bb[3] < lonW || w.bb[1] > lonE) continue;
       const st = OSM_EST[w[0]] || OSM_EST[3], c = w[1];
       ctx.strokeStyle = st[0]; ctx.lineWidth = st[1] * lw; ctx.setLineDash(st[2]); ctx.globalAlpha = .85;
       ctx.beginPath();
