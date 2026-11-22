@@ -71,6 +71,9 @@ a.call{display:block;text-align:center;background:var(--bad);color:#fff;font-siz
 ul{padding-left:18px;margin:6px 0}li{margin:3px 0}
 .tag{display:inline-block;font-size:11px;font-weight:700;border-radius:5px;padding:1px 6px;background:var(--warn);color:#1a1000;margin-left:4px}
 .small{font-size:13px}
+.fblk{margin:0 0 10px}.fblk+.fblk{border-top:1px solid var(--line);padding-top:10px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px}.g4>div{background:var(--card2);border-radius:10px;padding:6px 8px}
+.g4 b{display:block;font-size:18px;font-variant-numeric:tabular-nums;line-height:1.2}.g4 span{font-size:11px;color:var(--mut)}
 .expl{background:var(--card2);border-radius:8px;padding:8px 10px;margin-top:6px}
 .expl .q{border-left:3px solid var(--blue);padding-left:8px;margin:6px 0 0}
 .norma{border-left:3px solid var(--warn);padding-left:8px;margin:6px 0 0}
@@ -122,6 +125,10 @@ details.tema h4{margin:8px 0 2px;font-size:14px}details.tema p{margin:4px 0}
   <div class="card" id="nextCard">
     <h2>Pròxim punt</h2>
     <div id="nextBody" class="mut">Activa el GPS o marca l'últim punt per on heu passat.</div>
+  </div>
+  <div class="card" id="faltaCard">
+    <h2>Falta</h2>
+    <div id="faltaBody" class="mut small">Activa el GPS o marca a «Punts» l'últim punt per on heu passat.</div>
   </div>
   <div class="card" id="decCard">
     <h2>Pròxima decisió</h2>
@@ -290,6 +297,34 @@ function routeKm(p){ return KMS[p.k][0]; } // metres along whole route
 function dayStart(d){ return d===1?0:D1END; }
 
 // plan time (minutes) at a given route metre for day d
+// ---------------- FALTA (km, desnivell, temps) ----------------
+// Desnivell acumulat del track (MDT) per repartir dins de cada tram el desnivell de la fitxa (reconeixement v5).
+const CUM = (()=>{ const up=[0], dn=[0]; for (let i=1;i<TRK.length;i++){ const dz=TRK[i][2]-TRK[i-1][2]; up.push(up[i-1]+Math.max(0,dz)); dn.push(dn[i-1]+Math.max(0,-dz)); } return {up,dn}; })();
+function cumAt(arr,m){ if (m<=0) return 0; for (let i=1;i<TRK.length;i++){ if (TRK[i][3]>=m){ const a=TRK[i-1],b=TRK[i],f=(m-a[3])/Math.max(1,b[3]-a[3]); return arr[i-1]+f*(arr[i]-arr[i-1]); } } return arr[arr.length-1]; }
+const TRAMS = {1:[],2:[]};
+[1,2].forEach(d=>{ const ps=PTS.filter(p=>p.d===d);
+  ps.forEach((p,i)=>{ if (!p.tr) return; const fi=ps.slice(i+1).find(q=>!q.est)||ps[ps.length-1];
+    const m=/\+(\d+)\s*\/\s*−(\d+)/.exec(p.tr.dz); TRAMS[d].push({a:KMS[p.k][0], b:KMS[fi.k][0], up:m?+m[1]:0, dn:m?+m[2]:0}); }); });
+function dzEntre(m0,m1,d){ // desnivell previst entre dos punts del track (metres des de P0) del dia d
+  let up=0, dn=0;
+  for (const t of TRAMS[d]){ const a=Math.max(m0,t.a), b=Math.min(m1,t.b); if (b<=a) continue;
+    const tu=cumAt(CUM.up,t.b)-cumAt(CUM.up,t.a), td=cumAt(CUM.dn,t.b)-cumAt(CUM.dn,t.a), fr=(b-a)/Math.max(1,t.b-t.a);
+    up += t.up*(tu>0?(cumAt(CUM.up,b)-cumAt(CUM.up,a))/tu:fr); dn += t.dn*(td>0?(cumAt(CUM.dn,b)-cumAt(CUM.dn,a))/td:fr); }
+  return {up:Math.round(up), dn:Math.round(dn)};
+}
+function renderFalta(pr,late,n){
+  const el=$("#faltaBody");
+  if (!pr){ el.className="mut small"; el.textContent="Activa el GPS o marca a «Punts» l'últim punt per on heu passat."; return; }
+  const ps=dayPts(day), fi=ps[ps.length-1], nxt=ps.find(p=>routeKm(p)>pr.m+20);
+  const fila=(nom,p)=>{ const km=(routeKm(p)-pr.m)/1000, z=dzEntre(pr.m,routeKm(p),day), dt=Math.max(0,toMin(p.t)-planAt(pr.m,day)), arr=n+dt;
+    return `<div class="fblk"><div class="hd"><span class="code">${esc(p.c)}</span> <b>${esc(p.n)}</b> <span class="mut small">· ${nom}</span></div>
+      <div class="g4"><div><b>${km.toFixed(2).replace(".",",")}</b><span>km</span></div><div><b>+${z.up}</b><span>−${z.dn} m</span></div><div><b>${fmtDur(dt)}</b><span>temps</span></div><div><b>${fmtMin(arr)}</b><span>arribada</span></div></div></div>`; };
+  if (!nxt){ el.className="small"; el.innerHTML="<b>Final de l'etapa.</b>"; return; }
+  el.className="small";
+  el.innerHTML=`${fila("pròxim punt",nxt)}${nxt!==fi?fila("final del dia",fi):""}
+    <p class="mut" style="margin:6px 0 0">Temps amb el ritme del grup de la fitxa (parades i dinar inclosos)${pr.src==="marca"?", comptat des de l'últim punt marcat":""}. Arribada = ara + temps que falta.</p>`;
+}
+
 function planAt(m, d){
   const ps = dayPts(d);
   for (let i=0;i<ps.length-1;i++){
@@ -373,8 +408,9 @@ function tick(){
       if (obert){ const dd=document.querySelector("#nextBody details"); if (dd) dd.open=true; }
       if (nxt.pas) alerts.push(["warn","Pas equipat a P5: corda de 30 m, mosquetons i bagues a punt. Roca mullada o glaçada → no passar (B1)."]);
     } else $("#nextBody").innerHTML = "<b>Final de l'etapa.</b>";
+    renderFalta(pr,late,n);
   } else {
-    $("#kmDone").textContent="--"; $("#delay").textContent="--"; $("#delay").className="";
+    $("#kmDone").textContent="--"; $("#delay").textContent="--"; $("#delay").className=""; renderFalta(null);
     $("#nextBody").textContent="Activa el GPS o marca a «Punts» l'últim punt per on heu passat.";
   }
   // pròxima decisió
@@ -572,7 +608,7 @@ document.addEventListener("visibilitychange",()=>{ if (wakeOn && document.visibi
 <script>
 // ---------------- INIT ----------------
 if (store.get("light",false)) document.body.classList.add("light");
-$("#verTxt").textContent = "Versió de l'app: v5 (guia d'interpretació per punts i temes, desnivells i horaris del reconeixement del 21/11, mapa ICGC offline, camins OSM, meteo Open-Meteo, llum calculada).";
+$("#verTxt").textContent = "Versió de l'app: v6 (quadre «Falta»: km, desnivell, temps i arribada, guia d'interpretació per punts i temes, desnivells i horaris del reconeixement del 21/11, mapa ICGC offline, camins OSM, meteo Open-Meteo, llum calculada).";
 renderStatic(); pintaWake(); mapa.init(); meteo.init(); setDay(day); setInterval(tick, 15000);
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
   navigator.serviceWorker.register("sw.js").catch(function(){});
