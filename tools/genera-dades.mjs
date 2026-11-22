@@ -11,12 +11,13 @@ const { TRACK, KMS, PTS, COORD } = D;
 const avui = new Date().toISOString().slice(0, 10);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-async function fetchJson(url, opts = {}, intents = 3) {
+async function fetchJson(url, opts = {}, intents = 4) {
   for (let i = 0; i < intents; i++) {
     try {
       const r = await fetch(url, { ...opts, headers: { "User-Agent": "catllaras-guia/1.0 (app del guia, GitHub Pages)", ...(opts.headers || {}) } });
       if (r.ok) return await r.json();
       console.warn("HTTP", r.status, url.slice(0, 80));
+      if (r.status === 429) { await sleep(65000); continue; } // límit per minut: esperar i tornar-hi
     } catch (e) { console.warn("Error", e.message); }
     await sleep(3000 * (i + 1));
   }
@@ -77,7 +78,7 @@ console.log(`camins.js: ${ways.length} camins`);
 
 // ---------- 2. Orientació (solell / obaga) ----------
 // Mostra el terreny cada 100 m del track i calcula el pendent i l'orientació amb 4 cotes a ±40 m.
-const PAS = 100, OFF = 40;
+const PAS = 150, OFF = 40;
 function puntA(m) {
   for (let i = 0; i < TRACK.length - 1; i++) {
     const p = TRACK[i], q2 = TRACK[i + 1];
@@ -94,12 +95,18 @@ for (const s of mostres) {
   coords.push([la + dla, lo], [la - dla, lo], [la, lo + dlo], [la, lo - dlo]);
 }
 const elev = [];
-for (let i = 0; i < coords.length; i += 100) {
-  const c = coords.slice(i, i + 100);
+try {
+for (let i = 0; i < coords.length; i += 50) {
+  const c = coords.slice(i, i + 50);
   const u = "https://api.open-meteo.com/v1/elevation?latitude=" + c.map(x => x[0].toFixed(5)).join(",") + "&longitude=" + c.map(x => x[1].toFixed(5)).join(",");
   const j = await fetchJson(u);
   elev.push(...j.elevation);
-  await sleep(400);
+  await sleep(8000); // Open-Meteo limita les peticions per minut
+}
+} catch (e) {
+  // Sense elevacions es manté l'orientacio.js anterior; els camins ja s'han desat.
+  console.warn("Orientació no generada:", e.message);
+  process.exit(0);
 }
 const orient = mostres.map((s, k) => {
   const [zn, zs, ze, zw] = elev.slice(k * 4, k * 4 + 4);
