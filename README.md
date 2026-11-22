@@ -17,6 +17,7 @@ App web offline per al guia de la travessa amb bivac a la serra del Catllaràs: 
 |---|---|
 | `index.html` | Pantalles i lògica de l'app (horari, GPS, decisions, llum, 112) |
 | `dades.js` | Dades de la fitxa: track, punts, horaris, plans, riscos, material. **Per fer una altra ruta, es canvia aquest fitxer.** |
+| `interpretacio.js` | Què explicar a cada punt (amb pregunta per al grup) i temes de la serra: Gaudí, mines, història, geologia, llegendes, flora i fauna. Ve de la guia d'interpretació de la ruta. |
 | `mapa.js` | Mapa propi en canvas: teselles ICGC desades, mapa de la fitxa a sota, camins OSM, track, punts i GPS |
 | `meteo.js` | Previsió Open-Meteo per a P0, el Xalet i P5, interpolada per altitud i a l'hora de pas de cada punt |
 | `camins.js` | Camins d'OpenStreetMap al voltant de la ruta (generat) |
@@ -31,7 +32,7 @@ Es generen sols amb GitHub Actions (`.github/workflows/dades.yml`) cada vegada q
 
 ## Publicar canvis
 
-Canvieu `CACHE` a `sw.js` (p. ex. `catllaras-v3`) perquè els mòbils baixin la versió nova. El mapa desat no s'esborra.
+Canvieu `CACHE` a `sw.js` (p. ex. `catllaras-v6`) perquè els mòbils baixin la versió nova. El mapa desat no s'esborra.
 
 ## Fonts i llicències
 

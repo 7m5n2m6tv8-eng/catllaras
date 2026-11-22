@@ -71,6 +71,12 @@ a.call{display:block;text-align:center;background:var(--bad);color:#fff;font-siz
 ul{padding-left:18px;margin:6px 0}li{margin:3px 0}
 .tag{display:inline-block;font-size:11px;font-weight:700;border-radius:5px;padding:1px 6px;background:var(--warn);color:#1a1000;margin-left:4px}
 .small{font-size:13px}
+.expl{background:var(--card2);border-radius:8px;padding:8px 10px;margin-top:6px}
+.expl .q{border-left:3px solid var(--blue);padding-left:8px;margin:6px 0 0}
+.norma{border-left:3px solid var(--warn);padding-left:8px;margin:6px 0 0}
+.temabtn{display:inline-block;border:1px solid var(--line);background:transparent;color:var(--blue);border-radius:14px;padding:3px 9px;font-size:12px;font-weight:600;margin:6px 6px 0 0;cursor:pointer}
+details.tema{border-bottom:1px solid var(--line);padding:4px 0 6px}details.tema summary{font-weight:700;font-size:15px;color:var(--tx);padding:4px 0}
+details.tema h4{margin:8px 0 2px;font-size:14px}details.tema p{margin:4px 0}
 </style>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
@@ -223,7 +229,7 @@ ul{padding-left:18px;margin:6px 0}li{margin:3px 0}
     <p>Accés amb vehicle particular fins a P0 · pernocta al refugi lliure del Xalet, sense foc (només fogonet) · contacte extern designat pel guia, avisat a la sortida, abans de perdre cobertura al D1 i a l'arribada.</p>
     <p>Capacitat del refugi: ≈10 places; el grup és de 15 amb el guia (la resta, tenda o bivac a fora).</p>
   </div>
-  <div class="card"><h2>Explicar la serra</h2><div id="serra"></div></div>
+  <div class="card"><h2>Interpretació: temes de la serra</h2><p class="small mut" style="margin:0 0 6px">Guia d'interpretació de la ruta. Les llegendes s'expliquen com a llegendes.</p><div id="serra"></div></div>
   <div class="card"><h2>Ajustos</h2>
     <div class="row">
       <button class="btn sm" id="themeBtn">Mode clar / fosc</button>
@@ -248,6 +254,7 @@ ul{padding-left:18px;margin:6px 0}li{margin:3px 0}
 </nav>
 
 <script src="dades.js"></script>
+<script src="interpretacio.js"></script>
 <script src="camins.js"></script>
 <script src="orientacio.js"></script>
 <script>
@@ -355,13 +362,15 @@ function tick(){
       const distKm=(routeKm(nxt)-pr.m)/1000, eta=toMin(nxt.t)+Math.max(late,0)*(pr.src==="gps"?1:1);
       const limLeft=toMin(nxt.l)-n;
       const prv = [...ps].reverse().find(p=>routeKm(p)<=pr.m+20), ori = prv?vessantTxt(day,prv):"";
+      const obert=!!document.querySelector("#nextBody details[open]");
       $("#nextBody").innerHTML = `<div class="hd"><span class="code">${nxt.c}</span> <b>${esc(nxt.n)}</b></div>${ori?`<div class="small" style="margin-top:4px">${ori}</div>`:""}
         <div class="grid2" style="margin-top:8px">
           <div class="kv"><b>${distKm.toFixed(2).replace(".",",")} km</b><span>pel track</span></div>
           <div class="kv"><b>${nxt.t}${nxt.est?"≈":""}</b><span>hora prevista</span></div>
           <div class="kv"><b>${fmtMin(eta).slice(0,5)}</b><span>arribada estimada</span></div>
           <div class="kv"><b class="${limLeft<0?"bad":limLeft<20?"warn":""}">${nxt.l}</b><span>límit (${limLeft<0?"superat":"falten "+fmtDur(limLeft)})</span></div>
-        </div><p style="margin:8px 0 0">${esc(nxt.f)}</p>`;
+        </div><p style="margin:8px 0 0">${esc(nxt.f)}</p>${explicarHtml(day,nxt,true)}`;
+      if (obert){ const dd=document.querySelector("#nextBody details"); if (dd) dd.open=true; }
       if (nxt.pas) alerts.push(["warn","Pas equipat a P5: corda de 30 m, mosquetons i bagues a punt. Roca mullada o glaçada → no passar (B1)."]);
     } else $("#nextBody").innerHTML = "<b>Final de l'etapa.</b>";
   } else {
@@ -404,7 +413,7 @@ function renderPunts(){
         <button class="btn sm" data-arr="${p.k}">${a!==undefined?"Desmarcar":"Hi som"}</button>
         <button class="btn sm" data-nav="${p.c}">Navegar</button>
       </div>
-      ${p.i?`<details><summary>Explicar al grup</summary><div class="small" style="margin-top:4px">${esc(p.i)}</div></details>`:""}
+      ${explicarHtml(day,p,false)}
       ${p.tr?`<div class="tram"><b>${p.tr.n}</b> · ${p.tr.km} km · ${p.tr.dz} m · pend. ${p.tr.p} · ${p.tr.m}<br>${esc(p.tr.x)}${vessantTxt(day,p)?"<br>"+vessantTxt(day,p):""}</div>`:""}
     </div>`;}).join("");
 }
@@ -425,7 +434,7 @@ function renderStatic(){
   $("#riscos").innerHTML = RISCOS.map(r=>`<div class="pt"><div class="hd"><span class="nm">${esc(r[0])}</span></div><div class="small"><b>On:</b> ${esc(r[1])}</div><div class="small"><b>Mesura:</b> ${esc(r[2])}</div><div class="small warn"><b>Llindar:</b> ${esc(r[3])}</div></div>`).join("");
   const chk = (id,list,key)=>{ const st=store.get(key,{}); $(id).innerHTML=list.map((t,i)=>`<label><input type="checkbox" data-k="${key}" data-i="${i}" ${st[i]?"checked":""}><span>${esc(t)}</span></label>`).join(""); };
   chk("#matG",MAT_G,"matG"); chk("#matB",MAT_B,"matB");
-  $("#serra").innerHTML = SERRA.map(s=>`<details><summary>${esc(s[0])}</summary><div class="small" style="margin:4px 0 8px">${esc(s[1])}</div></details>`).join("");
+  $("#serra").innerHTML = TEMES.map(temaHtml).join("");
 }
 
 // ---------------- GPS ----------------
@@ -495,6 +504,30 @@ $("#resetBtn").onclick=()=>{ if (confirm("Esborrar totes les marques d'arribada?
 $("#simOn").onclick=()=>{ const v=$("#simTime").value; if(v){ sim=toMin(v); tick(); } };
 $("#simOff").onclick=()=>{ sim=null; tick(); };
 
+// ---------------- INTERPRETACIÓ ----------------
+const TEMA = Object.fromEntries(TEMES.map(t=>[t.id,t]));
+function explicarHtml(d,p,ara){
+  const e = EXPLICAR[d+":"+p.k] || (p.i?{i:p.i}:null); if (!e) return "";
+  const cos = `<div class="expl small">${esc(e.i)}${e.q?`<p class="q"><b>Pregunta:</b> ${esc(e.q)}</p>`:""}${(e.temes||[]).map(id=>TEMA[id]?`<button class="temabtn" data-tema="${id}">${esc(TEMA[id].t)} →</button>`:"").join("")}</div>`;
+  return `<details${ara?"":""}><summary>${ara?"Què explicar a "+esc(p.c):"Explicar al grup"}</summary>${cos}</details>`;
+}
+function temaHtml(t){
+  let h = `<details class="tema" id="tema-${t.id}"><summary>${esc(t.t)}</summary><div class="small">`;
+  if (t.curt) h += `<p><b>${esc(t.curt)}</b></p>`;
+  if (t.llista && !t.llistaT) h += `<ul>${t.llista.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`;
+  (t.s||[]).forEach(([st,tx])=>{ h += (st?`<h4>${esc(st)}</h4>`:"")+`<p>${esc(tx)}</p>`; });
+  if (t.llista && t.llistaT) h += `<h4>${esc(t.llistaT)}</h4><ul>${t.llista.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`;
+  if (t.q) h += `<p class="q" style="border-left:3px solid var(--blue);padding-left:8px"><b>Pregunta per al grup:</b> ${esc(t.q)}</p>`;
+  if (t.norma) h += `<p class="norma"><b>${t.id==="fonts"?"Atenció":"Norma"}:</b> ${esc(t.norma)}</p>`;
+  return h + `</div></details>`;
+}
+document.addEventListener("click",e=>{
+  const b=e.target.closest("[data-tema]"); if(!b) return;
+  document.querySelector('#nav button[data-s="info"]').click();
+  const d=document.getElementById("tema-"+b.dataset.tema); if(!d) return;
+  d.open=true; setTimeout(()=>d.scrollIntoView({behavior:"smooth",block:"start"}),50);
+});
+
 // ---------------- LLUM ----------------
 // Sortida i posta de sol (algorisme NOAA) al Xalet; lloc segur = posta − 30 min, com a la fitxa.
 const DATES = {1:[2026,11,28], 2:[2026,11,29]};
@@ -539,7 +572,7 @@ document.addEventListener("visibilitychange",()=>{ if (wakeOn && document.visibi
 <script>
 // ---------------- INIT ----------------
 if (store.get("light",false)) document.body.classList.add("light");
-$("#verTxt").textContent = "Versió de l'app: v4 (desnivells i horaris del reconeixement del 21/11, mapa ICGC offline, camins OSM, meteo Open-Meteo, llum calculada).";
+$("#verTxt").textContent = "Versió de l'app: v5 (guia d'interpretació per punts i temes, desnivells i horaris del reconeixement del 21/11, mapa ICGC offline, camins OSM, meteo Open-Meteo, llum calculada).";
 renderStatic(); pintaWake(); mapa.init(); meteo.init(); setDay(day); setInterval(tick, 15000);
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
   navigator.serviceWorker.register("sw.js").catch(function(){});
