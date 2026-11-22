@@ -539,7 +539,7 @@ document.addEventListener("visibilitychange",()=>{ if (wakeOn && document.visibi
 <script>
 // ---------------- INIT ----------------
 if (store.get("light",false)) document.body.classList.add("light");
-$("#verTxt").textContent = "Versió de l'app: v2 (mapa ICGC offline, camins OSM, meteo Open-Meteo, llum calculada).";
+$("#verTxt").textContent = "Versió de l'app: v3 (mapa ICGC offline, camins OSM, meteo Open-Meteo, llum calculada).";
 renderStatic(); pintaWake(); mapa.init(); meteo.init(); setDay(day); setInterval(tick, 15000);
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
   navigator.serviceWorker.register("sw.js").catch(function(){});
