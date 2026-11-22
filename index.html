@@ -98,6 +98,7 @@ details.tema h4{margin:8px 0 2px;font-size:14px}details.tema p{margin:4px 0}
 <!-- ============ ARA ============ -->
 <section id="s-ara" class="act">
   <div class="seg" id="daySeg"><button data-d="1">Dia 1 · Ds 28</button><button data-d="2">Dia 2 · Dg 29</button></div>
+  <div class="row" style="margin:-4px 0 10px;gap:8px"><span class="small mut">Pla que seguiu:</span><div class="seg" id="plaSeg" style="flex:1;margin:0"></div></div>
   <div id="alerts"></div>
   <div class="card">
     <h2>Llum</h2>
@@ -121,6 +122,10 @@ details.tema h4{margin:8px 0 2px;font-size:14px}details.tema p{margin:4px 0}
       <div class="kv"><b id="eleNow">--</b><span>cota GPS</span></div>
     </div>
     <p class="mut small" style="margin:8px 0 0">Sense GPS: marca els punts a «Punts» amb «Hi som» i l'horari es calcula igual.</p>
+  </div>
+  <div class="card" id="plaCard" style="display:none">
+    <h2>Seguint el pla</h2>
+    <div id="plaBody"></div>
   </div>
   <div class="card" id="nextCard">
     <h2>Pròxim punt</h2>
@@ -159,10 +164,11 @@ details.tema h4{margin:8px 0 2px;font-size:14px}details.tema p{margin:4px 0}
     <button class="btn sm" id="zMe">Centrar en mi</button>
     <button class="btn sm" id="capaBtn">Base: ICGC</button>
     <button class="btn sm" id="caminsBtn">Camins OSM</button>
+    <button class="btn sm" id="plansBtn">Plans B/C</button>
     <span class="mut small" id="mapStat"></span>
   </div>
   <div id="mapwrap"><canvas id="mapcv" aria-label="Mapa de la ruta"></canvas></div>
-  <div class="maplegend"><span><i style="border-color:#8e44ad"></i>Dia 1</span><span><i style="border-color:#1f6fd1"></i>Dia 2</span><span><i style="border-color:#d35400;border-top-style:dashed"></i>pista (OSM)</span><span><i style="border-color:#c0392b;border-top-style:dotted"></i>sender (OSM)</span><span>◆ decisió</span></div>
+  <div class="maplegend"><span><i style="border-color:#8e44ad"></i>Dia 1</span><span><i style="border-color:#1f6fd1"></i>Dia 2</span><span><i style="border-color:#8d5524;border-top-style:dashed"></i>pista (OSM)</span><span><i style="border-color:#c0392b;border-top-style:dotted"></i>sender (OSM)</span><span><i style="border-color:#e67e22;border-top-style:dashed;border-top-width:4px"></i>plans B</span><span><i style="border-color:#2e7d32;border-top-style:dashed;border-top-width:4px"></i>pla C</span><span>◆ decisió</span></div>
   <div class="card" style="margin-top:10px">
     <h2>Mapa sense cobertura</h2>
     <div id="tilesStat" class="small">Comprovant les teselles desades…</div>
@@ -264,6 +270,7 @@ details.tema h4{margin:8px 0 2px;font-size:14px}details.tema p{margin:4px 0}
 <script src="interpretacio.js"></script>
 <script src="camins.js"></script>
 <script src="orientacio.js"></script>
+<script src="plans.js"></script>
 <script>
 // ---------------- UTILS ----------------
 const $ = s => document.querySelector(s);
@@ -380,6 +387,15 @@ function tick(){
   $("#safeLeft").className = (SAFEm-n<30)?"bad":(SAFEm-n<90?"warn":"");
   $("#sunLeft").textContent = fmtDur(SUNm-n);
   const ps=dayPts(day), pr=progress(), alerts=[];
+  const plaAl = pla.render(n,SAFEm);
+  if (plaAl){
+    alerts.push(...plaAl);
+    $("#llumA").innerHTML = `Seguint el pla <b>${esc(pla.actiu())}</b>: l'hora d'arribada és a la targeta del pla.<br><span class="mut">Posta calculada per al ${L.txt}: ${fmtMin(SUNm)} (lloc segur 30 min abans).</span>`;
+    if (SAFEm-n<60 && SAFEm-n>-200) alerts.push(["warn","Menys d'1 hora de llum útil: frontals a mà."]);
+    alerts.push(...meteo.alertes(day)); meteo.ara();
+    $("#alerts").innerHTML = alerts.map(a=>`<div class="alert ${a[0]}">${esc(a[1])}</div>`).join("");
+    renderTarget(); return;
+  }
   // arribada al final del dia seguint el pla A amb el retard actual
   { const fi=ps[ps.length-1]; let lt=0;
     if (pr){ lt = pr.src==="marca" ? arr[day+":"+pr.p.k]-toMin(pr.p.t) : n-planAt(pr.m,day); }
@@ -463,7 +479,7 @@ function renderStatic(){
     <div class="small"><b>On:</b> ${esc(q[1])} · ${esc(q[4])}</div>
     <div class="small">${esc(q[3])}</div>
     <div class="small warn"><b>${esc(q[5])}</b></div></div>`).join("");
-  $("#plans").innerHTML = PLANS.map(p=>`<div class="pt"><div class="hd"><span class="code">${p[0]}</span><span class="nm">${esc(p[1])}</span></div>
+  $("#plans").innerHTML = PLANS.map(p=>`<div class="pt"><div class="hd"><span class="code">${p[0]}</span><span class="nm">${esc(p[1])}</span>${PLANS_BC[p[0]]?`<button class="btn sm" data-seguir="${p[0]}">Seguir aquest pla</button>`:""}</div>
     <div class="small"><b>S'activa:</b> ${esc(p[2])} · ${esc(p[3])}</div>${NOTES[p[0]]?`<div class="small mut">${esc(NOTES[p[0]])}</div>`:""}</div>`).join("");
   $("#llindars").innerHTML = "<table><tr><th>Factor</th><th>Llindar</th><th>Pla</th></tr>"+LLINDARS.map(r=>`<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td><b>${esc(r[2])}</b></td></tr>`).join("")+"</table>";
   $("#trBC").innerHTML = "<table><tr><th>Pla</th><th>Tram</th><th>km</th><th>+/− m</th><th>Marxa</th><th>Acum.</th></tr>"+TRBC.map(r=>`<tr>${r.map((c,i)=>`<td>${i===0?"<b>"+c+"</b>":esc(c)}</td>`).join("")}</tr>`).join("")+"</table>";
@@ -539,7 +555,7 @@ $("#ptList").addEventListener("click",e=>{
 });
 document.addEventListener("change",e=>{ const t=e.target; if (t.dataset && t.dataset.k){ const st=store.get(t.dataset.k,{}); st[t.dataset.i]=t.checked; store.set(t.dataset.k,st); } });
 $("#themeBtn").onclick=()=>{ document.body.classList.toggle("light"); store.set("light",document.body.classList.contains("light")); mapa.dibuixa(); };
-$("#resetBtn").onclick=()=>{ if (confirm("Esborrar totes les marques d'arribada?")){ arr={}; store.set("arr",arr); renderPunts(); tick(); } };
+$("#resetBtn").onclick=()=>{ if (confirm("Esborrar totes les marques d'arribada?")){ arr={}; store.set("arr",arr); pla.esborra(); renderPunts(); tick(); } };
 $("#simOn").onclick=()=>{ const v=$("#simTime").value; if(v){ sim=toMin(v); tick(); } };
 $("#simOff").onclick=()=>{ sim=null; tick(); };
 
@@ -606,13 +622,14 @@ function pintaWake(){ const b=$("#wakeBtn"); if(!b) return;
 $("#wakeBtn").onclick=()=>{ wakeOn=!wakeOn; if (wakeOn) demanaWake(); else { if(wakeLock) wakeLock.release(); wakeLock=null; pintaWake(); } };
 document.addEventListener("visibilitychange",()=>{ if (wakeOn && document.visibilityState==="visible" && !wakeLock) demanaWake(); });
 </script>
+<script src="pla.js"></script>
 <script src="mapa.js"></script>
 <script src="meteo.js"></script>
 <script>
 // ---------------- INIT ----------------
 if (store.get("light",false)) document.body.classList.add("light");
-$("#verTxt").textContent = "Versió de l'app: v9 (quadre «Falta»: km, desnivell, temps i arribada, guia d'interpretació per punts i temes, desnivells i horaris del reconeixement del 21/11, mapa ICGC offline, camins OSM, meteo Open-Meteo, llum calculada).";
-renderStatic(); pintaWake(); mapa.init(); meteo.init(); setDay(day); setInterval(tick, 15000);
+$("#verTxt").textContent = "Versió de l'app: v10 (plans B i C al mapa i per seguir-los, quadre «Falta»: km, desnivell, temps i arribada, guia d'interpretació per punts i temes, desnivells i horaris del reconeixement del 21/11, mapa ICGC offline, camins OSM, meteo Open-Meteo, llum calculada).";
+renderStatic(); pintaWake(); mapa.init(); meteo.init(); pla.init(); setDay(day); setInterval(tick, 15000);
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
   navigator.serviceWorker.register("sw.js").then(function(reg){
     reg.addEventListener("updatefound", function(){ var w=reg.installing; if(!w) return;

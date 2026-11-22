@@ -8,15 +8,15 @@ const mapa = (() => {
   // metres al voltant del track (i dels plans B i C) que es descarreguen a cada zoom
   const BUF = {12: 3000, 13: 2000, 14: 1100, 15: 650, 16: 350};
   // trams dels plans B i C (línia recta entre punts, amb marge ampli) per tenir-los també offline
-  const PLANS_BC = [["P6","PB"],["PB","P0"],["P8","JB"],["JB","P11"],["P1","PB"]];
+  const TRAMS_DESC = [["P6","PB"],["PB","P0"],["P8","JB"],["JB","P11"],["P1","PB"]];
   const BUF_BC = {12: 3000, 13: 2000, 14: 1300, 15: 900, 16: 700};
   const COL = {d1: "#8e44ad", d2: "#1f6fd1", dec: "#e67e22"};
   const OSM_EST = [ // [color, gruix, guions] per tipus: carretera, camí asfaltat, pista, sender, escales
-    ["#7f8c8d", 3, []], ["#95a5a6", 2.2, []], ["#d35400", 2, [7, 4]], ["#c0392b", 1.8, [2, 3]], ["#c0392b", 2.4, [1, 2]]];
+    ["#7f8c8d", 3, []], ["#95a5a6", 2.2, []], ["#8d5524", 2, [7, 4]], ["#c0392b", 1.8, [2, 3]], ["#c0392b", 2.4, [1, 2]]];
 
   let cv, ctx, W = 0, H = 0, dpr = 1;
   let cLat = 42.222, cLon = 1.978, Z = 13.3;
-  let base = store.get("mapBase", "icgc"), caminsOn = store.get("mapCamins", true);
+  let base = store.get("mapBase", "icgc"), caminsOn = store.get("mapCamins", true), plansMode = store.get("mapPlans", "tots");
   const tiles = new Map(); // "z/x/y" -> {img, ok, err}
   let fitxaImg = null, fitxaInv = null, pendent = false, mostrat = false;
 
@@ -53,7 +53,7 @@ const mapa = (() => {
     // 3) camins OSM
     if (caminsOn && base === "icgc" && typeof CAMINS !== "undefined" && CAMINS) pintaCamins();
     // 4) track, punts i GPS
-    if (base === "icgc") { pintaTrack(); pintaPunts(); }
+    if (base === "icgc") { pintaPlans(); pintaTrack(); pintaPlaActiu(); pintaPunts(); }
     pintaGps();
     // escala
     const mpp = 156543.034 * Math.cos(cLat * Math.PI / 180) / 2 ** Z;
@@ -112,6 +112,31 @@ const mapa = (() => {
       ctx.strokeStyle = col; ctx.lineWidth = d === day ? 4.5 : 3; ctx.globalAlpha = d === day ? 1 : .6; ctx.stroke(); ctx.globalAlpha = 1;
     }
   }
+  // Plans B i C: B taronja discontinu, C verd punt-ratlla; el pla que se segueix, més gruixut i per sobre del track A
+  const ESTP = k => k === "C" ? ["#2e7d32", [10, 4, 2, 4]] : ["#e67e22", [10, 6]];
+  function liniaPla(k, w, halo) {
+    const pl = PLANS_BC[k], [col, dash] = ESTP(k);
+    ctx.beginPath(); pl.pts.forEach((p, i) => { const [x, y] = scr(p[0], p[1]); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+    ctx.lineJoin = "round"; ctx.lineCap = "round";
+    if (halo) { ctx.setLineDash([]); ctx.strokeStyle = "rgba(255,255,255,.9)"; ctx.lineWidth = w + 4; ctx.stroke(); }
+    ctx.setLineDash(dash); ctx.strokeStyle = col; ctx.lineWidth = w; ctx.stroke(); ctx.setLineDash([]);
+  }
+  function pintaPlans() {
+    if (typeof PLANS_BC === "undefined" || plansMode !== "tots") return;
+    const act = typeof pla !== "undefined" ? pla.actiu() : "A";
+    for (const k in PLANS_BC) if (k !== act && k !== "B1") { ctx.globalAlpha = .85; liniaPla(k, 3, false); ctx.globalAlpha = 1; }
+  }
+  function pintaPlaActiu() {
+    if (typeof PLANS_BC === "undefined" || typeof pla === "undefined" || plansMode === "cap") return;
+    const k = pla.actiu(); if (!PLANS_BC[k]) return;
+    liniaPla(k, 5, true);
+    ctx.font = "bold 12px system-ui,sans-serif"; ctx.textBaseline = "middle";
+    for (const [c, m] of PLANS_BC[k].fites) if (c === "FT" || c === "EP") {
+      const p = PLANS_BC[k].pts.reduce((a, q) => Math.abs(q[3] - m) < Math.abs(a[3] - m) ? q : a), [x, y] = scr(p[0], p[1]);
+      ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(x, y, 4.5, 0, 7); ctx.fill(); ctx.strokeStyle = "#2e7d32"; ctx.lineWidth = 2; ctx.stroke();
+      const tw = ctx.measureText(c).width; ctx.fillStyle = "rgba(255,255,255,.88)"; ctx.fillRect(x + 8, y - 8, tw + 6, 16); ctx.fillStyle = "#111"; ctx.fillText(c, x + 11, y);
+    }
+  }
   function pintaPunts() {
     const decs = new Set(PTS.filter(p => p.dec).map(p => p.c));
     ctx.font = "bold 12px system-ui,sans-serif"; ctx.textBaseline = "middle";
@@ -162,6 +187,7 @@ const mapa = (() => {
     $("#zOut").onclick = () => zoomAt(Z - 1, W / 2, H / 2);
     $("#zMe").onclick = () => { if (!gps) { startGps(); return; } cLat = gps.lat; cLon = gps.lon; if (Z < 15) Z = 15; guarda(); dibuixa(); };
     $("#capaBtn").onclick = () => { base = base === "icgc" ? "fitxa" : "icgc"; store.set("mapBase", base); botons(); dibuixa(); };
+    $("#plansBtn").onclick = () => { plansMode = {tots: "actiu", actiu: "cap", cap: "tots"}[plansMode]; store.set("mapPlans", plansMode); botons(); dibuixa(); };
     $("#caminsBtn").onclick = () => { caminsOn = !caminsOn; store.set("mapCamins", caminsOn); botons(); dibuixa(); };
     window.addEventListener("resize", mida);
     window.addEventListener("online", () => { tiles.forEach((t, k) => { if (t.err) tiles.delete(k); }); dibuixa(); estatTeselles(); });
@@ -169,6 +195,7 @@ const mapa = (() => {
   }
   function botons() {
     $("#capaBtn").textContent = base === "icgc" ? "Base: ICGC" : "Base: mapa de la fitxa";
+    $("#plansBtn").textContent = {tots: "Plans B/C: tots", actiu: "Plans B/C: el que seguiu", cap: "Plans B/C: cap"}[plansMode];
     const hiHa = typeof CAMINS !== "undefined" && CAMINS;
     $("#caminsBtn").textContent = hiHa ? (caminsOn ? "Camins OSM ✓" : "Camins OSM") : "Camins OSM (no generats)";
     $("#caminsBtn").disabled = !hiHa || base !== "icgc";
@@ -191,7 +218,8 @@ const mapa = (() => {
     };
     for (let z = TZMIN; z <= TZDESC; z++) {
       for (let i = 0; i < TRK.length; i += 2) afegeix(TRK[i][0], TRK[i][1], BUF[z], z);
-      for (const [a, b] of PLANS_BC) {
+      if (typeof PLANS_BC !== "undefined") { for (const k in PLANS_BC) { const p = PLANS_BC[k].pts; for (let i = 0; i < p.length; i += 3) afegeix(p[i][0], p[i][1], BUF[z], z); } }
+      else for (const [a, b] of TRAMS_DESC) {
         const A = coord(a), B = coord(b), n = Math.ceil(hav(A[2], A[3], B[2], B[3]) / 150);
         for (let i = 0; i <= n; i++) afegeix(A[2] + (B[2] - A[2]) * i / n, A[3] + (B[3] - A[3]) * i / n, BUF_BC[z], z);
       }
