@@ -611,7 +611,7 @@ document.addEventListener("visibilitychange",()=>{ if (wakeOn && document.visibi
 <script>
 // ---------------- INIT ----------------
 if (store.get("light",false)) document.body.classList.add("light");
-$("#verTxt").textContent = "Versió de l'app: v8 (quadre «Falta»: km, desnivell, temps i arribada, guia d'interpretació per punts i temes, desnivells i horaris del reconeixement del 21/11, mapa ICGC offline, camins OSM, meteo Open-Meteo, llum calculada).";
+$("#verTxt").textContent = "Versió de l'app: v9 (quadre «Falta»: km, desnivell, temps i arribada, guia d'interpretació per punts i temes, desnivells i horaris del reconeixement del 21/11, mapa ICGC offline, camins OSM, meteo Open-Meteo, llum calculada).";
 renderStatic(); pintaWake(); mapa.init(); meteo.init(); setDay(day); setInterval(tick, 15000);
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
   navigator.serviceWorker.register("sw.js").then(function(reg){

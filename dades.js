@@ -10,8 +10,8 @@ const SAFE = "16:53", SUNSET = "17:23";
 // v5 (22/11/2026): desnivells del reconeixement GPS del 21/11 (Strava, baròmetre) ajustats a les cotes dels waypoints; temps amb el mateix model de la fitxa.
 const PTS = [
  // dia 1
- {k:"P0",c:"P0",d:1,n:"Monestir de Santa Maria de Lillet",cota:916,km:"0,00",t:"10:45",l:"12:00",dec:"C",
-  f:"Trobada 10:30: recompte, material de bivac, meteo i briefing. Decidir A o C. → si no: C",
+ {k:"P0",c:"P0",d:1,n:"Monestir de Santa Maria de Lillet",cota:916,km:"0,00",t:"10:45",l:"10:45",dec:"C",
+  f:"Trobada 10:30: recompte, material de bivac, meteo i briefing. Decidir A o C abans de les 10:45 (amb el pla A, sortida com a molt tard a les 12:00). → si no: C",
   tr:{n:"P0 → P1",x:"Sender de pujada al Castell de Lillet. Escalfament, ritme suau.",km:"0,73",dz:"+126 / −0",p:"15°",m:"0h29"}},
  {k:"P1",c:"P1",d:1,n:"Roca del Castell / Castell de Lillet",cota:1042,km:"0,73",t:"11:19",l:"12:30",
   f:"Reagrupar. Ajustar el ritme al més lent.",
@@ -94,7 +94,7 @@ const QUEFER = [
  ["Retard, boira o vent a la carena, grup cansat, pas de P5 glaçat o mullat","P3","B1","S'acaba el D1 al Xalet; pràctica d'orientació als voltants","3,0 km · +452/−0 · 1h53","Ser a P3 abans de les 14:00"],
  ["Lesionat lleu que camina, malestar o mal temps al Xalet","P3/P6","B2","Pista del Xalet → Solell del Corder → Ventallola → PB (vehicle) → P0","5,5 km · +96/−549 · 2h22","Sortir abans de les 14:00"],
  ["Lesionat que camina o empitjorament","P7","B4","Tornar al Xalet (P6) i baixar per la pista del B2 fins a P0","6,6 km · +136/−643 · 2h54","Sortir de P7 abans de les 13:30"],
- ["Retard, vent o boira a la carena P9–P10","P8","B3","P8 → JB → Baga de Montclús → Torrent del Junyent → P11 → pla A fins a P0","9,6 km · +208/−621 · 3h58","Sortir de P8 abans de les 11:45"],
+ ["Retard, vent o boira a la carena P9–P10","P8","B3","P8 → JB → Baga de Montclús → Torrent del Junyent → P11 → pla A fins a P0","9,6 km · +208/−621 · 3h58","Sortir de P8 abans de les 11:45 (amb pluja, abans de les 10:10 pel gual)"],
  ["Torrent del Junyent crescut","Gual (B3, km 2,8)","B4","Tornar a P8 i P7 i aplicar el B4; avisar el contacte extern","≈3,9 km fins a P7 · ≈1h45","Sortir del gual abans de les 11:30; més tard: no creuar, avisar i 112 si cal"],
  ["Retard a la tarda del D2","P11","A (frontal)","Seguir el pla A (no hi ha drecera): frontals a mà, grup junt, avís al contacte extern","6,1 km · 2h31","Ser a P11 abans de les 13:15"],
  ["Accident greu, ferit que no camina o hipotèrmia amb confusió","Qualsevol","112","Protegir, valorar, trucar al 112 amb el codi del punt. No baixar-lo a peu: abrigar i esperar el rescat","—","Immediat"]
