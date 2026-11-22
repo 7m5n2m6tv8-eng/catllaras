@@ -1,0 +1,31 @@
+name: Genera camins OSM i orientació
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "dades.js"
+      - "tools/genera-dades.mjs"
+      - ".github/workflows/dades.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  genera:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node tools/genera-dades.mjs
+      - name: Desa els fitxers generats
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add camins.js orientacio.js
+          if git diff --cached --quiet; then echo "Sense canvis"; exit 0; fi
+          git commit -m "Actualitza camins OSM i orientació dels trams"
+          git push
