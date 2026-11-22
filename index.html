@@ -233,7 +233,7 @@ ul{padding-left:18px;margin:6px 0}li{margin:3px 0}
     <h3>Mode prova</h3>
     <p class="small mut">Per provar l'app abans de la sortida: simula una hora i un dia.</p>
     <div class="row"><input type="time" id="simTime" style="font-size:16px;padding:6px"><button class="btn sm" id="simOn">Simular</button><button class="btn sm" id="simOff">Hora real</button></div>
-    <p class="small mut">Dades: fitxa tècnica v4 (Izan Pimentel Pérez) · track oficial i waypoints · mapa ICGC (CC BY 4.0) · camins © OpenStreetMap contributors (ODbL) · meteo Open-Meteo (CC BY 4.0) · elevacions Copernicus GLO-90. Temps i pendents són estimacions que el guia valida al terreny.</p>
+    <p class="small mut">Dades: fitxa tècnica v5 (Izan Pimentel Pérez) · reconeixement GPS del 21/11/2026 · track oficial i waypoints · mapa ICGC (CC BY 4.0) · camins © OpenStreetMap contributors (ODbL) · meteo Open-Meteo (CC BY 4.0) · elevacions Copernicus GLO-90. Temps i pendents són estimacions que el guia valida al terreny.</p>
   </div>
 </section>
 </main>
@@ -390,8 +390,8 @@ function tick(){
 function renderPunts(){
   const ps=dayPts(day);
   $("#dayHead").innerHTML = day===1
-   ? `<h2>Dia 1 · Ds 28/11 · P0 → Xalet</h2><div>6,79 km · +814 / −359 m · marxa neta 4h07 · 10:45 → 15:59 · marge de llum 0h54</div>`
-   : `<h2>Dia 2 · Dg 29/11 · Xalet → P0</h2><div>13,23 km · +660 / −1113 m · marxa neta 6h26 · 07:45 → 15:39 · marge de llum 1h14</div>`;
+   ? `<h2>Dia 1 · Ds 28/11 · P0 → Xalet</h2><div>6,79 km · +683 / −227 m · marxa neta 3h44 · 10:45 → 15:33 · marge de llum 1h20</div>`
+   : `<h2>Dia 2 · Dg 29/11 · Xalet → P0</h2><div>13,23 km · +400 / −856 m · marxa neta 5h41 · 07:45 → 14:47 · marge de llum 2h06</div>`;
   $("#profImg").src = PERFILS[day];
   $("#ptList").innerHTML = ps.map(p=>{
     const key=day+":"+p.k, a=arr[key];
@@ -539,7 +539,7 @@ document.addEventListener("visibilitychange",()=>{ if (wakeOn && document.visibi
 <script>
 // ---------------- INIT ----------------
 if (store.get("light",false)) document.body.classList.add("light");
-$("#verTxt").textContent = "Versió de l'app: v3 (mapa ICGC offline, camins OSM, meteo Open-Meteo, llum calculada).";
+$("#verTxt").textContent = "Versió de l'app: v4 (desnivells i horaris del reconeixement del 21/11, mapa ICGC offline, camins OSM, meteo Open-Meteo, llum calculada).";
 renderStatic(); pintaWake(); mapa.init(); meteo.init(); setDay(day); setInterval(tick, 15000);
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
   navigator.serviceWorker.register("sw.js").catch(function(){});

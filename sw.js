@@ -2,7 +2,7 @@
 // - CACHE: l'app (canvieu el número de versió quan pugeu canvis perquè els mòbils baixin la nova).
 // - TILES: teselles del mapa ICGC; NO s'esborren en actualitzar l'app.
 // - La previsió d'Open-Meteo no passa per aquí: l'app la desa al mòbil.
-const CACHE = "catllaras-v3";
+const CACHE = "catllaras-v4";
 const TILES = "catllaras-teselles-v1";
 const FILES = ["./", "./index.html", "./dades.js", "./camins.js", "./orientacio.js", "./mapa.js", "./meteo.js",
   "./img/mapa-fitxa.jpg", "./img/perfil-d1.jpg", "./img/perfil-d2.jpg",
