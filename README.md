@@ -23,7 +23,7 @@ App web offline per al guia de la travessa amb bivac a la serra del Catllaràs: 
 | `pla.js` | Seguir un pla B o C a la pantalla «Ara»: progrés, què falta fins a la pròxima fita i al final, i hora d'arribada |
 | `gpx/` | GPX de tots els plans (A dia 1 i 2, B1–B4, C) i un fitxer amb tots junts |
 | `mapa.js` | Mapa propi en canvas: teselles ICGC desades, mapa de la fitxa a sota, camins OSM, track, punts i GPS |
-| `camp.js` | Eines de camp: guió «Què explicarem» i briefing d'una pantalla (botons a «Ara»), text per dictar al 112 amb posició i botó de compartir, i caminada simulada al mode prova |
+| `camp.js` | Eines de camp: guió «Què explicarem» amb criteris d'avaluació (botó a «Ara»), text per dictar al 112 amb posició i botó de compartir, i caminada simulada al mode prova |
 | `sinoptica.js` | Pestanya **Temps**: mapa del temps en canvas (isòbares, A/D, fronts estimats a partir de la T a 850 hPa, vent a 850 hPa, núvols, pluja), explicació del cap de setmana, pressió i temperatura segons l'altura, tipus de núvols i evolució al Xalet. Graella Open-Meteo de 2° (Atlàntic nord-est i Europa occidental) + 3 punts de la ruta |
 | `costa.js` | Costes i fronteres (Natural Earth) per al mapa del temps, comprimides |
 | `meteo.js` | Previsió Open-Meteo per a P0, el Xalet i P5, interpolada per altitud i a l'hora de pas de cada punt |
@@ -39,7 +39,7 @@ Es generen sols amb GitHub Actions (`.github/workflows/dades.yml`) cada vegada q
 
 ## Publicar canvis
 
-Canvieu `CACHE` a `sw.js` (p. ex. `catllaras-v21`). L'app es baixa de fons quan hi ha cobertura i mostra el botó «Actualitzar» quan hi ha una versió nova. El mapa desat no s'esborra.
+Canvieu `CACHE` a `sw.js` (p. ex. `catllaras-v22`). L'app es baixa de fons quan hi ha cobertura i mostra el botó «Actualitzar» quan hi ha una versió nova. El mapa desat no s'esborra.
 
 ## Fonts i llicències
 

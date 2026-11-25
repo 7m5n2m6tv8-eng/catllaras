@@ -89,32 +89,9 @@
     }).join("");
   }
 
-  const briefTxt = d => {
-    const L = llum(d), c = d === 1 ? 1 : 3, h = d === 1 ? 0 : 2;
-    return `Briefing ${dayName(d)}\nPosta de sol ${fmtMin(L.posta)} · lloc segur abans de ${fmtMin(L.safe)}\n\nHorari\n` +
-      HORARI.map(r => `${r[c]}  ${r[h]}`).join("\n") +
-      `\n\nLlindars per canviar de pla\n` + LLINDARS.map(r => `- ${r[0]}: ${r[1]} → ${r[2]}`).join("\n") +
-      `\n\nContacte extern: sense notícies a les 17:00 del D2, truca al 112.`;
-  };
-
-  function briefing(d) {
-    const L = llum(d), c = d === 1 ? 1 : 3, h = d === 1 ? 0 : 2;
-    const dec = QUEFER.filter(q => q[2] !== "112").map(q => `<tr><td><b>${esc(q[2])}</b></td><td>${esc(q[0])}</td><td>${esc(q[5])}</td></tr>`).join("");
-    return bar("Briefing · " + dayName(d), true) +
-      `<div class="pg"><b>Llum:</b> posta de sol <b>${fmtMin(L.posta)}</b> · estar en lloc segur abans de <b>${fmtMin(L.safe)}</b></div>
-       <h3>Horari previst</h3><table>${HORARI.map(r => `<tr><td>${esc(r[h])}</td><td><b>${r[c]}</b></td></tr>`).join("")}</table>
-       <h3>Normes del grup</h3>
-       <ul class="small" style="margin:0;padding-left:18px"><li>El guia obre i marca el ritme del més lent; el tancador tanca.</li><li>Reagrupar a cada punt i a les cruïlles; recompte als punts marcats.</li><li>Ningú entra a bocamines ni pous. No sortir del track ni collir res.</li>${d === 1 ? `<li>Pas equipat de P5: d'un en un, amb el guia. Si la roca o les grapes estan glaçades o mullades, no es passa.</li>` : ""}</ul>
-       <h3>Quan canviem de pla</h3><table><tr><th>Factor</th><th>Llindar</th><th>Pla</th></tr>${LLINDARS.map(r => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td><b>${esc(r[2])}</b></td></tr>`).join("")}</table>
-       <h3>Punts de decisió</h3><table>${dec}</table>
-       ${d === 1 ? `<h3>Bivac (cada persona)</h3><p class="small" style="margin:0">${MAT_B.map(esc).join(" · ")}</p>` : ""}
-       <p class="small mut" style="margin-top:12px">Contacte extern: sense notícies a les 17:00 del D2, truca al 112.</p>
-       <div class="campRow" style="margin-top:12px"><button class="btn ac" id="briefShare">Compartir text</button></div>`;
-  }
-
   function obre(kind, d) {
     ovDay = d || ovDay;
-    ov.innerHTML = kind === "guio" ? guio(ovDay) : briefing(ovDay);
+    ov.innerHTML = guio(ovDay);
     ov.dataset.kind = kind; pintaFix(); fix.style.display = "flex";
     if (!actiu) {
       const cur = document.querySelector("main section.act"); prev = cur ? cur.id : "s-ara"; actiu = true;
@@ -127,11 +104,6 @@
     if (e.target.id === "ovX" || e.target.id === "ovX2") return close();
     const od = e.target.closest("[data-od]"); if (od) return obre(ov.dataset.kind, +od.dataset.od);
     if (e.target.closest("[data-tema]")) restore(); // el gestor global obre el tema a Info
-    if (e.target.id === "briefShare") {
-      const t = briefTxt(ovDay);
-      if (navigator.share) navigator.share({ title: "Briefing Catllaràs", text: t }).catch(() => {});
-      else if (navigator.clipboard) navigator.clipboard.writeText(t).then(() => { e.target.textContent = "Copiat"; });
-    }
   };
   ov.addEventListener("click", onClick); fix.addEventListener("click", onClick);
 
@@ -139,10 +111,9 @@
   const ara = document.getElementById("s-ara");
   if (ara) {
     const row = document.createElement("div"); row.className = "campRow";
-    row.innerHTML = `<button class="btn" id="btnGuio">📖 Què explicarem</button><button class="btn" id="btnBrief">📣 Briefing</button>`;
+    row.innerHTML = `<button class="btn" id="btnGuio">📖 Què explicarem</button>`;
     ara.insertBefore(row, document.getElementById("alerts"));
     row.querySelector("#btnGuio").onclick = () => obre("guio", day);
-    row.querySelector("#btnBrief").onclick = () => obre("brief", day);
   }
 
   // ---------- 112: text per dictar i ubicació ----------
