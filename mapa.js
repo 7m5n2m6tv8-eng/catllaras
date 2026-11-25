@@ -16,6 +16,11 @@ const mapa = (() => {
 
   let cv, ctx, W = 0, H = 0, dpr = 1;
   let cLat = 42.222, cLon = 1.978, Z = 13.3;
+  // orientació: rot = graus que gira el mapa en sentit horari (0 = nord amunt; -rumb = el rumb apunta amunt)
+  let rot = 0, cr = 1, sr = 0, mode = store.get("mapRot", "nord"); // "nord" | "rumb" (segueix el rumb) | "lliure" (girat a mà)
+  let hdg = null, hdgSrc = "", compass = null, lastMove = null, mvH = null, mvT = 0, lastDrag = 0, oriT = 0, oriOn = false;
+  const nrm = a => ((a % 360) + 540) % 360 - 180; // (-180,180]
+  function setRot(r) { rot = nrm(r); cr = Math.cos(rot * Math.PI / 180); sr = Math.sin(rot * Math.PI / 180); }
   let base = store.get("mapBase", "icgc"), caminsOn = store.get("mapCamins", true), plansMode = store.get("mapPlans", "tots");
   const tiles = new Map(); // "z/x/y" -> {img, ok, err}
   let fitxaImg = null, fitxaInv = null, pendent = false, mostrat = false;
@@ -24,7 +29,8 @@ const mapa = (() => {
   const wy = (lat, z) => { const s = Math.sin(lat * Math.PI / 180); return (0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * 256 * 2 ** z; };
   const lonOf = (x, z) => x / (256 * 2 ** z) * 360 - 180;
   const latOf = (y, z) => { const n = Math.PI - 2 * Math.PI * y / (256 * 2 ** z); return 180 / Math.PI * Math.atan(Math.sinh(n)); };
-  function scr(lat, lon) { return [W / 2 + wx(lon, Z) - wx(cLon, Z), H / 2 + wy(lat, Z) - wy(cLat, Z)]; }
+  function scr(lat, lon) { const dx = wx(lon, Z) - wx(cLon, Z), dy = wy(lat, Z) - wy(cLat, Z); return [W / 2 + dx * cr - dy * sr, H / 2 + dx * sr + dy * cr]; }
+  const unrot = (dx, dy) => [dx * cr + dy * sr, -dx * sr + dy * cr]; // de pantalla a món
   const tileUrl = (z, x, y) => TILE_URL.replace("{z}", z).replace("{x}", x).replace("{y}", y);
   const coord = c => COORD.find(r => r[0] === c);
 
@@ -55,6 +61,7 @@ const mapa = (() => {
     // 4) track, punts i GPS
     if (base === "icgc") { pintaPlans(); pintaTrack(); pintaPlaActiu(); pintaPunts(); }
     pintaGps();
+    pintaBruixola();
     // escala
     const mpp = 156543.034 * Math.cos(cLat * Math.PI / 180) / 2 ** Z;
     let m = [50, 100, 200, 500, 1000, 2000, 5000].find(v => v / mpp > 70) || 5000, px = m / mpp;
@@ -74,9 +81,10 @@ const mapa = (() => {
   }
   function pintaTeselles() {
     const tz = Math.max(TZMIN, Math.min(navigator.onLine ? 17 : TZDESC, Math.round(Z))), s = 2 ** (Z - tz);
-    const x0 = wx(cLon, tz) - W / 2 / s, y0 = wy(cLat, tz) - H / 2 / s;
-    for (let tx = Math.floor(x0 / 256); tx <= Math.floor((x0 + W / s) / 256); tx++)
-      for (let ty = Math.floor(y0 / 256); ty <= Math.floor((y0 + H / s) / 256); ty++) {
+    const cx = wx(cLon, tz), cy = wy(cLat, tz), x0 = cx - W / 2 / s, y0 = cy - H / 2 / s, R = Math.hypot(W, H) / 2 / s; // R: radi que cobreix la pantalla girada
+    ctx.save(); ctx.translate(W / 2, H / 2); ctx.rotate(rot * Math.PI / 180); ctx.translate(-W / 2, -H / 2);
+    for (let tx = Math.floor((cx - R) / 256); tx <= Math.floor((cx + R) / 256); tx++)
+      for (let ty = Math.floor((cy - R) / 256); ty <= Math.floor((cy + R) / 256); ty++) {
         const sx = (tx * 256 - x0) * s, sy = (ty * 256 - y0) * s, sz = 256 * s;
         const t = tile(tz, tx, ty);
         if (t.ok) { ctx.drawImage(t.img, sx, sy, sz + .5, sz + .5); continue; }
@@ -87,11 +95,12 @@ const mapa = (() => {
           if (!pt && up === 1) tile(tz - up, px, py);
         }
       }
+    ctx.restore();
   }
   function pintaCamins() {
     const m = CAMINS.ways, lw = Math.max(.6, Math.min(1.4, (Z - 11) / 4));
     if (!m.bb) m.forEach(w => { const c = w[1]; let s = 9e9, n = -9e9, o = 9e9, e = -9e9; for (let i = 0; i < c.length; i += 2) { s = Math.min(s, c[i]); n = Math.max(n, c[i]); o = Math.min(o, c[i + 1]); e = Math.max(e, c[i + 1]); } w.bb = [s / 1e5, o / 1e5, n / 1e5, e / 1e5]; }), m.bb = true;
-    const latN = latOf(wy(cLat, Z) - H / 2, Z), latS = latOf(wy(cLat, Z) + H / 2, Z), lonW = lonOf(wx(cLon, Z) - W / 2, Z), lonE = lonOf(wx(cLon, Z) + W / 2, Z);
+    const Rr = Math.hypot(W, H) / 2, latN = latOf(wy(cLat, Z) - Rr, Z), latS = latOf(wy(cLat, Z) + Rr, Z), lonW = lonOf(wx(cLon, Z) - Rr, Z), lonE = lonOf(wx(cLon, Z) + Rr, Z);
     for (const w of m) {
       if (w.bb[2] < latS || w.bb[0] > latN || w.bb[3] < lonW || w.bb[1] > lonE) continue;
       const st = OSM_EST[w[0]] || OSM_EST[3], c = w[1];
@@ -150,25 +159,99 @@ const mapa = (() => {
   function pintaGps() {
     if (!gps) return;
     const [x, y] = scr(gps.lat, gps.lon), mpp = 156543.034 * Math.cos(gps.lat * Math.PI / 180) / 2 ** Z, r = Math.max(8, gps.acc / mpp);
+    // destí triat a «Ara → Navegar»: línia recta, distància i rumb
+    if (typeof target !== "undefined" && target) {
+      const t = coord(target);
+      if (t) {
+        const [tx, ty] = scr(t[2], t[3]), d = hav(gps.lat, gps.lon, t[2], t[3]), b = bearing(gps.lat, gps.lon, t[2], t[3]);
+        ctx.setLineDash([9, 6]); ctx.lineWidth = 3; ctx.strokeStyle = "#c2185b"; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(tx, ty); ctx.stroke(); ctx.setLineDash([]);
+        const txt = `${t[0]} · ${d < 1000 ? Math.round(d) + " m" : (d / 1000).toFixed(2).replace(".", ",") + " km"} · ${Math.round(b)}° ${CARD[Math.round(b / 45) % 8]}`;
+        ctx.font = "bold 12px system-ui,sans-serif"; ctx.textBaseline = "middle"; const tw = ctx.measureText(txt).width, mx = (x + tx) / 2, my = (y + ty) / 2;
+        ctx.fillStyle = "rgba(255,255,255,.92)"; ctx.fillRect(mx - tw / 2 - 4, my - 9, tw + 8, 18); ctx.fillStyle = "#c2185b"; ctx.textAlign = "center"; ctx.fillText(txt, mx, my); ctx.textAlign = "start";
+      }
+    }
+    // direcció cap on vas: con davant del punt blau
+    if (hdg !== null) {
+      const a = (hdg + rot) * Math.PI / 180, ux = Math.sin(a), uy = -Math.cos(a), L = 46;
+      const g = ctx.createRadialGradient(x, y, 6, x, y, L); g.addColorStop(0, "rgba(30,136,255,.55)"); g.addColorStop(1, "rgba(30,136,255,0)");
+      ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x, y); ctx.arc(x, y, L, a - Math.PI / 2 - .5, a - Math.PI / 2 + .5); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#1e88ff"; ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.beginPath();
+      ctx.moveTo(x + ux * 20, y + uy * 20); ctx.lineTo(x + ux * 10 - uy * 7, y + uy * 10 + ux * 7); ctx.lineTo(x + ux * 10 + uy * 7, y + uy * 10 - ux * 7); ctx.closePath(); ctx.stroke(); ctx.fill();
+    }
     ctx.fillStyle = "rgba(30,136,255,.15)"; ctx.strokeStyle = "rgba(30,136,255,.5)"; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); ctx.stroke();
     ctx.fillStyle = "#1e88ff"; ctx.strokeStyle = "#fff"; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(x, y, 8, 0, 7); ctx.stroke(); ctx.fill();
   }
 
-  // ----- interacció: arrossegar, pessigar, roda, doble toc -----
+  function pintaBruixola() { // fletxa vermella = nord; tocar-la torna el mapa al nord
+    ctx.save(); ctx.translate(W - 30, 30); ctx.fillStyle = "rgba(255,255,255,.92)"; ctx.strokeStyle = "#555"; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(0, 0, 19, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.rotate(rot * Math.PI / 180); ctx.fillStyle = "#d32f2f"; ctx.beginPath(); ctx.moveTo(0, -15); ctx.lineTo(6, 2); ctx.lineTo(-6, 2); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#777"; ctx.beginPath(); ctx.moveTo(0, 15); ctx.lineTo(6, 2); ctx.lineTo(-6, 2); ctx.closePath(); ctx.fill(); ctx.restore();
+  }
+
+  // ----- rumb: GPS en moviment, últim desplaçament o brúixola del mòbil -----
+  function actualitzaRumb() {
+    if (!gps) { hdg = null; hdgSrc = ""; lastMove = null; mvH = null; return; }
+    if (!lastMove) lastMove = {lat: gps.lat, lon: gps.lon};
+    else if (hav(lastMove.lat, lastMove.lon, gps.lat, gps.lon) >= Math.max(10, gps.acc * .6)) { mvH = bearing(lastMove.lat, lastMove.lon, gps.lat, gps.lon); mvT = Date.now(); lastMove = {lat: gps.lat, lon: gps.lon}; }
+    const mou = gps.hdg != null && isFinite(gps.hdg) && (gps.spd == null || gps.spd >= .7);
+    if (mou) { hdg = gps.hdg; hdgSrc = "GPS"; }
+    else if (mvH !== null && Date.now() - mvT < 45000) { hdg = mvH; hdgSrc = "GPS"; }
+    else if (compass !== null) { hdg = compass; hdgSrc = "brúixola"; }
+    segueix();
+  }
+  function segueix() { // mode «rumb»: el mapa gira perquè el rumb quedi amunt i se segueix el punt blau
+    if (mode !== "rumb") return;
+    if (hdg !== null) setRot(rot + nrm(-hdg - rot) * .35);
+    if (gps && Date.now() - lastDrag > 20000) { cLat = gps.lat; cLon = gps.lon; }
+  }
+  function onOri(e) {
+    let h = null;
+    if (e.webkitCompassHeading != null) h = e.webkitCompassHeading; // iPhone: ja és respecte al nord
+    else if (e.absolute && e.alpha != null) { // Android: brúixola amb inclinació (exemple del W3C)
+      const k = Math.PI / 180, x = (e.beta || 0) * k, y = (e.gamma || 0) * k, z = e.alpha * k, cY = Math.cos(y), cZ = Math.cos(z), sX = Math.sin(x), sY = Math.sin(y), sZ = Math.sin(z);
+      const Vx = -cZ * sY - sZ * sX * cY, Vy = -sZ * sY + cZ * sX * cY; h = Math.atan(Vx / Vy); if (Vy < 0) h += Math.PI; else if (Vx < 0) h += 2 * Math.PI; h /= k;
+    } else return;
+    h = (h + (screen.orientation ? screen.orientation.angle : 0) + 360) % 360;
+    compass = compass === null ? h : (compass + nrm(h - compass) * .15 + 360) % 360;
+    const t = Date.now(); if (t - oriT < 150) return; oriT = t;
+    const mou = gps && gps.hdg != null && isFinite(gps.hdg) && (gps.spd == null || gps.spd >= .7), recent = mvH !== null && t - mvT < 45000;
+    if (!mou && !recent) { hdg = compass; hdgSrc = "brúixola"; segueix(); dibuixa(); estatMapa(); }
+  }
+  function engegaBruixola() { // s'ha de cridar des d'un toc de l'usuari (iPhone demana permís)
+    if (oriOn) return;
+    const go = () => { oriOn = true; window.addEventListener("deviceorientationabsolute", onOri, true); window.addEventListener("deviceorientation", onOri, true); };
+    try {
+      if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function") DeviceOrientationEvent.requestPermission().then(r => { if (r === "granted") go(); }).catch(() => {});
+      else if ("DeviceOrientationEvent" in window) go();
+    } catch (e) {}
+  }
+  function estatMapa() {
+    const r = hdg !== null ? ` · rumb ${Math.round(hdg)}° ${CARD[Math.round(hdg / 45) % 8]} (${hdgSrc})` : (mode === "rumb" ? " · camina uns metres per veure el rumb" : "");
+    $("#mapStat").textContent = gps ? `GPS ±${Math.round(gps.acc)} m${r}` : "GPS aturat";
+  }
+  function posaMode(m) {
+    mode = m; store.set("mapRot", m);
+    if (m === "nord") setRot(0);
+    if (m === "rumb") { engegaBruixola(); lastDrag = 0; if (hdg !== null) setRot(-hdg); if (gps) { cLat = gps.lat; cLon = gps.lon; } else startGps(); }
+    guarda(); botons(); estatMapa(); dibuixa();
+  }
+
+  // ----- interacció: arrossegar, pessigar, girar amb dos dits, roda, doble toc -----
   const ptrs = new Map(); let pinch = null, lastTap = 0;
-  function moveBy(dx, dy) { cLon = lonOf(wx(cLon, Z) - dx, Z); cLat = latOf(wy(cLat, Z) - dy, Z); }
+  function moveBy(dx, dy) { const [a, b] = unrot(dx, dy); cLon = lonOf(wx(cLon, Z) - a, Z); cLat = latOf(wy(cLat, Z) - b, Z); lastDrag = Date.now(); }
   function zoomAt(nz, px, py) {
     nz = Math.max(ZMIN, Math.min(ZMAX, nz));
-    const lat = latOf(wy(cLat, Z) + py - H / 2, Z), lon = lonOf(wx(cLon, Z) + px - W / 2, Z);
-    Z = nz; cLon = lonOf(wx(lon, Z) - (px - W / 2), Z); cLat = latOf(wy(lat, Z) - (py - H / 2), Z);
+    const [ox, oy] = unrot(px - W / 2, py - H / 2), lat = latOf(wy(cLat, Z) + oy, Z), lon = lonOf(wx(cLon, Z) + ox, Z);
+    Z = nz; cLon = lonOf(wx(lon, Z) - ox, Z); cLat = latOf(wy(lat, Z) - oy, Z);
     guarda(); dibuixa();
   }
-  function guarda() { store.set("mapView", [cLat, cLon, Z]); }
+  function guarda() { store.set("mapView", [cLat, cLon, Z, rot]); }
   function lligaEvents() {
     cv.addEventListener("pointerdown", e => {
+      if (Math.hypot(e.offsetX - (W - 30), e.offsetY - 30) < 24) { posaMode("nord"); return; } // brúixola: tornar al nord
       cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, [e.offsetX, e.offsetY]);
-      if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = {d: Math.hypot(a[0] - b[0], a[1] - b[1]), z: Z}; }
+      if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = {d: Math.hypot(a[0] - b[0], a[1] - b[1]), z: Z, ang: Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI, rot0: rot, gira: false}; }
       const t = Date.now(); if (ptrs.size === 1 && t - lastTap < 300) zoomAt(Z + 1, e.offsetX, e.offsetY); lastTap = t;
     });
     cv.addEventListener("pointermove", e => {
@@ -177,6 +260,9 @@ const mapa = (() => {
       ptrs.set(e.pointerId, [e.offsetX, e.offsetY]);
       if (ptrs.size === 2 && pinch) {
         const [a, b] = [...ptrs.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]);
+        const da = nrm(Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI - pinch.ang);
+        if (!pinch.gira && Math.abs(da) > 12) pinch.gira = true; // llindar perquè un pessic no giri el mapa sense voler
+        if (pinch.gira) { setRot(pinch.rot0 + da); if (mode !== "lliure") { mode = "lliure"; store.set("mapRot", mode); botons(); } }
         zoomAt(pinch.z + Math.log2(d / pinch.d), (a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
       }
     });
@@ -185,7 +271,8 @@ const mapa = (() => {
     cv.addEventListener("wheel", e => { e.preventDefault(); zoomAt(Z - e.deltaY / 300, e.offsetX, e.offsetY); }, {passive: false});
     $("#zIn").onclick = () => zoomAt(Z + 1, W / 2, H / 2);
     $("#zOut").onclick = () => zoomAt(Z - 1, W / 2, H / 2);
-    $("#zMe").onclick = () => { if (!gps) { startGps(); return; } cLat = gps.lat; cLon = gps.lon; if (Z < 15) Z = 15; guarda(); dibuixa(); };
+    $("#zMe").onclick = () => { if (!gps) { startGps(); return; } cLat = gps.lat; cLon = gps.lon; lastDrag = 0; if (Z < 15) Z = 15; guarda(); dibuixa(); };
+    $("#rotBtn").onclick = () => posaMode(mode === "nord" ? "rumb" : "nord");
     $("#capaBtn").onclick = () => { base = base === "icgc" ? "fitxa" : "icgc"; store.set("mapBase", base); botons(); dibuixa(); };
     $("#plansBtn").onclick = () => { plansMode = {tots: "actiu", actiu: "cap", cap: "tots"}[plansMode]; store.set("mapPlans", plansMode); botons(); dibuixa(); };
     $("#caminsBtn").onclick = () => { caminsOn = !caminsOn; store.set("mapCamins", caminsOn); botons(); dibuixa(); };
@@ -194,6 +281,7 @@ const mapa = (() => {
     $("#tilesBtn").onclick = descarrega; $("#tilesDel").onclick = esborra;
   }
   function botons() {
+    $("#rotBtn").textContent = {nord: "Nord amunt", rumb: "Rumb amunt", lliure: "Girat (tocar: nord)"}[mode]; $("#rotBtn").classList.toggle("on", mode !== "nord");
     $("#capaBtn").textContent = base === "icgc" ? "Base: ICGC" : "Base: mapa de la fitxa";
     $("#plansBtn").textContent = {tots: "Plans B/C: tots", actiu: "Plans B/C: el que seguiu", cap: "Plans B/C: cap"}[plansMode];
     const hiHa = typeof CAMINS !== "undefined" && CAMINS;
@@ -264,12 +352,13 @@ const mapa = (() => {
   return {
     init() {
       cv = $("#mapcv"); ctx = cv.getContext("2d");
-      const v = store.get("mapView", null); if (v) [cLat, cLon, Z] = v;
+      const v = store.get("mapView", null); if (v) { [cLat, cLon, Z] = v; if (v[3] != null && mode !== "nord") setRot(v[3]); }
+      if (mode === "rumb") engegaBruixola();
       fitxaImg = new Image(); fitxaImg.onload = dibuixa; fitxaImg.src = MAPA_FITXA.src;
       lligaEvents(); botons(); estatTeselles();
     },
     mostra() { mostrat = true; mida(); estatTeselles(); },
-    gps() { $("#mapStat").textContent = gps ? `GPS ±${Math.round(gps.acc)} m` : "GPS aturat"; if (mostrat) dibuixa(); },
+    gps() { actualitzaRumb(); estatMapa(); if (mostrat) dibuixa(); },
     dibuixa,
     llistaTeselles
   };

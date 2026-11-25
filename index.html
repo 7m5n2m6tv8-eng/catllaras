@@ -167,6 +167,7 @@ details.tema h4{margin:8px 0 2px;font-size:14px}details.tema p{margin:4px 0}
   <div class="mapbar">
     <button class="btn sm" id="zIn" aria-label="Apropar">＋</button><button class="btn sm" id="zOut" aria-label="Allunyar">−</button>
     <button class="btn sm" id="zMe">Centrar en mi</button>
+    <button class="btn sm" id="rotBtn">Nord amunt</button>
     <button class="btn sm" id="capaBtn">Base: ICGC</button>
     <button class="btn sm" id="caminsBtn">Camins OSM</button>
     <button class="btn sm" id="plansBtn">Plans B/C</button>
@@ -181,7 +182,7 @@ details.tema h4{margin:8px 0 2px;font-size:14px}details.tema p{margin:4px 0}
     <div class="row"><button class="btn ac sm" id="tilesBtn">Descarregar el mapa de la ruta</button><button class="btn sm" id="tilesDel">Esborrar</button></div>
     <p class="small mut" style="margin:8px 0 0">Mapa topogràfic de l'ICGC, zooms 12 a 16, només al voltant del track i dels plans B i C. Fes-ho amb wifi abans de sortir. Si una zona no està desada, es veu el mapa de la fitxa, que sempre va inclòs a l'app.</p>
   </div>
-  <p class="mut small">Mapa topogràfic © Institut Cartogràfic i Geològic de Catalunya (CC BY 4.0) · camins © OpenStreetMap contributors (ODbL). Rombe taronja = punt de decisió. El punt blau és la teva posició GPS.</p>
+  <p class="mut small">Mapa topogràfic © Institut Cartogràfic i Geològic de Catalunya (CC BY 4.0) · camins © OpenStreetMap contributors (ODbL). Rombe taronja = punt de decisió. El punt blau és la teva posició GPS i el con indica cap on vas. Gira el mapa amb dos dits; «Rumb amunt» el gira perquè el rumb quedi sempre amunt; la brúixola de dalt a la dreta el torna al nord. La línia rosa va al destí triat a «Ara».</p>
 </section>
 
 <!-- ============ PLANS ============ -->
@@ -542,7 +543,7 @@ function startGps(){
   watchId = navigator.geolocation.watchPosition(pos=>{
     const {latitude:lat, longitude:lon, accuracy, altitude} = pos.coords;
     const s = snap(lat,lon,day); if (s && s.dist<300) lastKm[day]=s.m;
-    gps = {lat,lon,acc:accuracy,alt:altitude,snap:s,t:Date.now()};
+    gps = {lat,lon,acc:accuracy,alt:altitude,snap:s,t:Date.now(),hdg:pos.coords.heading,spd:pos.coords.speed};
     $("#gpsStat").textContent = `GPS ±${Math.round(accuracy)} m · ${new Date().toLocaleTimeString("ca",{hour:"2-digit",minute:"2-digit"})}`;
     $("#offTrack").textContent = s?Math.round(s.dist)+" m":"--";
     $("#offTrack").className = s&&s.dist>100?"bad":(s&&s.dist>40?"warn":"ok");
@@ -671,7 +672,7 @@ document.addEventListener("visibilitychange",()=>{ if (wakeOn && document.visibi
 <script>
 // ---------------- INIT ----------------
 if (store.get("light",false)) document.body.classList.add("light");
-$("#verTxt").textContent = "Versió de l'app: v12 (pestanya «Temps»: mapa del temps amb isòbares, anticiclons i depressions, fronts estimats, núvols, pluja i vent a 850 hPa, pressió segons l'altura, tipus de núvols i resum del cap de setmana; botó «Actualitzar meteo ara», plans B i C al mapa i per seguir-los, quadre «Falta»: km, desnivell, temps i arribada, guia d'interpretació per punts i temes, desnivells i horaris del reconeixement del 21/11, mapa ICGC offline, camins OSM, meteo Open-Meteo, llum calculada).";
+$("#verTxt").textContent = "Versió de l'app: v13 (mapa girable, rumb cap on vas i línia al destí; pestanya «Temps»: mapa del temps amb isòbares, anticiclons i depressions, fronts estimats, núvols, pluja i vent a 850 hPa, pressió segons l'altura, tipus de núvols i resum del cap de setmana; botó «Actualitzar meteo ara», plans B i C al mapa i per seguir-los, quadre «Falta»: km, desnivell, temps i arribada, guia d'interpretació per punts i temes, desnivells i horaris del reconeixement del 21/11, mapa ICGC offline, camins OSM, meteo Open-Meteo, llum calculada).";
 renderStatic(); pintaWake(); mapa.init(); meteo.init(); sino.init(); pla.init(); setDay(day); setInterval(tick, 15000);
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
   navigator.serviceWorker.register("sw.js").then(function(reg){
