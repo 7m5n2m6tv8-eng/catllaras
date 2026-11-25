@@ -10,6 +10,7 @@ App web offline per al guia de la travessa amb bivac a la serra del Catllaràs: 
 1. Obrir l'app perquè es desi la versió nova.
 2. **Mapa → «Descarregar el mapa de la ruta»**: teselles ICGC dels zooms 12 a 16 al voltant del track i dels plans B i C (uns 200 fitxers).
 3. **Info → «Actualitzar previsió»**: la previsió queda desada i es veu sense cobertura, amb l'hora en què es va baixar.
+4. **Temps → «Actualitzar el temps»**: baixa el mapa del temps (isòbares, anticiclons, depressions, fronts estimats, núvols, pluja, vent a 850 hPa) i la previsió en altura; també queda desat. Es pot repetir tantes vegades com es vulgui amb cobertura (si les dades tenen més de 3 h, s'actualitzen sols en obrir la pestanya).
 
 ## Fitxers
 
@@ -22,6 +23,8 @@ App web offline per al guia de la travessa amb bivac a la serra del Catllaràs: 
 | `pla.js` | Seguir un pla B o C a la pantalla «Ara»: progrés, què falta fins a la pròxima fita i al final, i hora d'arribada |
 | `gpx/` | GPX de tots els plans (A dia 1 i 2, B1–B4, C) i un fitxer amb tots junts |
 | `mapa.js` | Mapa propi en canvas: teselles ICGC desades, mapa de la fitxa a sota, camins OSM, track, punts i GPS |
+| `sinoptica.js` | Pestanya **Temps**: mapa del temps en canvas (isòbares, A/D, fronts estimats a partir de la T a 850 hPa, vent a 850 hPa, núvols, pluja), explicació del cap de setmana, pressió i temperatura segons l'altura, tipus de núvols i evolució al Xalet. Graella Open-Meteo de 2° (Atlàntic nord-est i Europa occidental) + 3 punts de la ruta |
+| `costa.js` | Costes i fronteres (Natural Earth) per al mapa del temps, comprimides |
 | `meteo.js` | Previsió Open-Meteo per a P0, el Xalet i P5, interpolada per altitud i a l'hora de pas de cada punt |
 | `camins.js` | Camins d'OpenStreetMap al voltant de la ruta (generat) |
 | `orientacio.js` | Solell / obaga de cada tram (generat) |
@@ -35,12 +38,13 @@ Es generen sols amb GitHub Actions (`.github/workflows/dades.yml`) cada vegada q
 
 ## Publicar canvis
 
-Canvieu `CACHE` a `sw.js` (p. ex. `catllaras-v9`). L'app es baixa de fons quan hi ha cobertura i mostra el botó «Actualitzar» quan hi ha una versió nova. El mapa desat no s'esborra.
+Canvieu `CACHE` a `sw.js` (p. ex. `catllaras-v13`). L'app es baixa de fons quan hi ha cobertura i mostra el botó «Actualitzar» quan hi ha una versió nova. El mapa desat no s'esborra.
 
 ## Fonts i llicències
 
 - Mapa topogràfic © Institut Cartogràfic i Geològic de Catalunya, CC BY 4.0.
 - Camins © OpenStreetMap contributors, ODbL.
+- Costes i fronteres del mapa del temps: Natural Earth (domini públic).
 - Previsió i elevacions: Open-Meteo (CC BY 4.0; elevacions Copernicus GLO-90). L'API gratuïta d'Open-Meteo és per a ús no comercial: si l'app es fa servir en sortides de pagament, cal valorar-ne el pla comercial.
 - Fitxa tècnica v4 d'Izan Pimentel Pérez. Temps i pendents són estimacions que el guia valida al terreny.
 
