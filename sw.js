@@ -1,10 +1,10 @@
 // Funcionament sense cobertura.
 // - CACHE: l'app (canvieu el número de versió quan pugeu canvis perquè els mòbils baixin la nova).
 // - TILES: teselles del mapa ICGC; NO s'esborren en actualitzar l'app.
-// - La previsió d'Open-Meteo no passa per aquí: l'app la desa al mòbil.
-const CACHE = "catllaras-v11";
+// - La previsió i el mapa del temps d'Open-Meteo no passen per aquí: l'app els desa al mòbil.
+const CACHE = "catllaras-v12";
 const TILES = "catllaras-teselles-v1";
-const FILES = ["./", "./index.html", "./dades.js", "./interpretacio.js", "./camins.js", "./orientacio.js", "./plans.js", "./pla.js", "./mapa.js", "./meteo.js",
+const FILES = ["./", "./index.html", "./dades.js", "./interpretacio.js", "./camins.js", "./orientacio.js", "./plans.js", "./pla.js", "./mapa.js", "./meteo.js", "./costa.js", "./sinoptica.js",
   "./img/mapa-fitxa.jpg", "./img/perfil-d1.jpg", "./img/perfil-d2.jpg",
   "./manifest.webmanifest", "./icon-180.png", "./icon-192.png", "./icon-512.png"];
 

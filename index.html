@@ -62,6 +62,10 @@ nav button.sos{color:var(--bad)}
 .met td,.met th{white-space:nowrap;padding:5px 4px}.met td.bad{background:rgba(255,107,91,.18)}.met td.warn{background:rgba(255,184,77,.16)}
 .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .mapbar{display:flex;gap:8px;margin:0 0 8px;flex-wrap:wrap}
+#sinoMap{border-radius:12px;overflow:hidden;background:#cfe0ee}#sinoCv{display:block;width:100%}
+.seg button[data-t]{flex:1 1 30%;font-size:13px;padding:7px 4px}
+#sinoTog button{font-size:13px}
+.maplegend span{display:inline-flex;align-items:center}
 img.prof{width:100%;border-radius:10px;background:#fff}
 .chk label{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--line)}
 .chk input{width:22px;height:22px;flex:none}
@@ -194,6 +198,40 @@ details.tema h4{margin:8px 0 2px;font-size:14px}details.tema p{margin:4px 0}
 </section>
 
 <!-- ============ 112 ============ -->
+<!-- ============ TEMPS ============ -->
+<section id="s-temps">
+  <div class="card"><h2>Mapa del temps</h2>
+    <div class="row" style="margin-bottom:8px"><button class="btn sm ac" id="sinoBtn">Actualitzar el temps</button><span class="small mut" id="sinoAct"></span></div>
+    <div class="seg" id="sinoCapa"><button data-v="cap">Només isòbares</button><button data-v="cc">Núvols</button><button data-v="pr">Pluja</button><button data-v="t8">T 850 hPa</button></div>
+    <div id="sinoMap"><canvas id="sinoCv"></canvas></div>
+    <div class="row" style="margin:8px 0 6px;flex-wrap:nowrap"><button class="btn sm" id="sinoPrev">◀</button><button class="btn sm" id="sinoPlay">▶</button><button class="btn sm" id="sinoNext">▶|</button><b id="sinoLab" style="flex:1;text-align:right"></b></div>
+    <input type="range" id="sinoSl" min="0" max="0" value="0" step="1" style="width:100%">
+    <div class="seg" id="sinoPre" style="margin:8px 0 6px;flex-wrap:wrap"></div>
+    <div class="seg" id="sinoTog" style="margin-bottom:0"><button data-v="iso">Isòbares</button><button data-v="fro">Fronts</button><button data-v="ven">Vent 850 hPa</button></div>
+    <div class="maplegend" id="sinoLeg"></div>
+  </div>
+  <div class="card"><h2>Què diu el mapa</h2><div id="sinoText" class="small"></div></div>
+  <div class="card"><h2>Cap de setmana, dia per dia</h2><div id="sinoResum" class="small"></div></div>
+  <div class="card"><h2>Pressió i temperatura segons l'altura</h2><div id="sinoPerfil" class="small"></div></div>
+  <div class="card"><h2>Núvols previstos</h2><div id="sinoNuv" class="small"></div></div>
+  <div class="card"><h2>Evolució al Xalet (7 dies)</h2><div id="sinoEvo" class="small"></div></div>
+  <div class="card"><h2>Com llegir-ho</h2>
+    <details><summary>Què és cada cosa</summary>
+      <ul class="small">
+        <li><b>Isòbares</b>: línies de la mateixa pressió al nivell del mar. Com més juntes, més vent.</li>
+        <li><b>A (anticicló)</b>: pressió alta, aire que baixa: normalment estable, cel net o núvols baixos i boira a les valls, i a l'hivern fred a la nit i inversions.</li>
+        <li><b>D (depressió)</b>: pressió baixa, aire que puja: núvols, vent i precipitació.</li>
+        <li><b>Front fred ▲</b>: aire fred que avança. Vent fort, ruixats i canvi brusc de temperatura; després aclarida. <b>Front càlid ●</b>: aire càlid que puja sobre el fred: núvols que engruixeixen i pluja feble contínua.</li>
+        <li><b>850 hPa</b> són uns 1.500 m, l'alçada del Xalet i de P5. <b>700 hPa</b> són uns 3.000 m; <b>500 hPa</b> uns 5.500 m.</li>
+        <li><b>Tendència de pressió</b>: baixa ràpid (més de 3 hPa en 12 h) = empitjora; puja ràpid = millora.</li>
+      </ul></details>
+    <details><summary>Fiabilitat i límits</summary>
+      <p class="small">Els <b>fronts del mapa NO són l'anàlisi oficial</b>: s'estimen automàticament a partir del gradient de temperatura a 850 hPa i del vent, i poden faltar-ne o sobrar-ne. Les A i D són els màxims i mínims de pressió de la graella (2°). Els tipus de núvol es dedueixen de la cobertura per capes, la humitat i la inestabilitat del model. Per a decisions, mira també les anàlisis i avisos oficials.</p>
+      <p class="small"><a href="https://www.meteo.cat/" style="color:var(--blue)">Servei Meteorològic de Catalunya</a> · <a href="https://www.aemet.es/" style="color:var(--blue)">AEMET</a> · <a href="https://www.windy.com/42.22/1.97?850h,42.22,1.97,8" style="color:var(--blue)">Windy (vent i T a 850 hPa)</a></p></details>
+    <p class="small mut" style="margin:8px 0 0">Dades: Open-Meteo (CC BY 4.0), graella de 2° i 3 punts de la ruta. Costes i fronteres: Natural Earth (domini públic).</p>
+  </div>
+</section>
+
 <section id="s-sos">
   <a class="call" href="tel:112">📞 Trucar al 112</a>
   <div class="card">
@@ -263,6 +301,7 @@ details.tema h4{margin:8px 0 2px;font-size:14px}details.tema p{margin:4px 0}
   <button data-s="punts"><i>📍</i>Punts</button>
   <button data-s="mapa"><i>🗺</i>Mapa</button>
   <button data-s="plans"><i>🔀</i>Plans</button>
+  <button data-s="temps"><i>☁</i>Temps</button>
   <button data-s="sos" class="sos"><i>✚</i>112</button>
   <button data-s="info"><i>ℹ</i>Info</button>
 </nav>
@@ -545,6 +584,7 @@ document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{
   document.querySelectorAll("#nav button").forEach(x=>x.classList.toggle("on",x===b));
   document.querySelectorAll("main section").forEach(s=>s.classList.toggle("act",s.id==="s-"+b.dataset.s));
   if (b.dataset.s==="mapa"){ mapa.mostra(); }
+  if (b.dataset.s==="temps"){ sino.mostra(); }
   window.scrollTo(0,0);
 });
 document.querySelectorAll("#daySeg button,#daySeg2 button").forEach(b=>b.onclick=()=>setDay(+b.dataset.d));
@@ -626,11 +666,13 @@ document.addEventListener("visibilitychange",()=>{ if (wakeOn && document.visibi
 <script src="pla.js"></script>
 <script src="mapa.js"></script>
 <script src="meteo.js"></script>
+<script src="costa.js"></script>
+<script src="sinoptica.js"></script>
 <script>
 // ---------------- INIT ----------------
 if (store.get("light",false)) document.body.classList.add("light");
-$("#verTxt").textContent = "Versió de l'app: v11 (botó «Actualitzar meteo ara», plans B i C al mapa i per seguir-los, quadre «Falta»: km, desnivell, temps i arribada, guia d'interpretació per punts i temes, desnivells i horaris del reconeixement del 21/11, mapa ICGC offline, camins OSM, meteo Open-Meteo, llum calculada).";
-renderStatic(); pintaWake(); mapa.init(); meteo.init(); pla.init(); setDay(day); setInterval(tick, 15000);
+$("#verTxt").textContent = "Versió de l'app: v12 (pestanya «Temps»: mapa del temps amb isòbares, anticiclons i depressions, fronts estimats, núvols, pluja i vent a 850 hPa, pressió segons l'altura, tipus de núvols i resum del cap de setmana; botó «Actualitzar meteo ara», plans B i C al mapa i per seguir-los, quadre «Falta»: km, desnivell, temps i arribada, guia d'interpretació per punts i temes, desnivells i horaris del reconeixement del 21/11, mapa ICGC offline, camins OSM, meteo Open-Meteo, llum calculada).";
+renderStatic(); pintaWake(); mapa.init(); meteo.init(); sino.init(); pla.init(); setDay(day); setInterval(tick, 15000);
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
   navigator.serviceWorker.register("sw.js").then(function(reg){
     reg.addEventListener("updatefound", function(){ var w=reg.installing; if(!w) return;
