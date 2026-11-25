@@ -149,4 +149,47 @@
       }, 400);
     };
   }
+
+  // ---------- Vista simple de «Ara» ----------
+  (() => {
+    const ara = document.getElementById("s-ara"); if (!ara) return;
+    const st = document.createElement("style");
+    st.textContent = `#s-ara.simple>*:not(#simpleCard):not(#alerts):not(.campRow):not(#daySeg):not(.vistaRow){display:none!important}
+    #simpleCard .nm{font-size:22px;font-weight:800;margin:2px 0 8px}
+    #simpleCard .big{font-size:34px;font-weight:800;line-height:1.1}
+    #simpleCard .g3{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+    #simpleCard .g3 div{background:var(--card2);border-radius:10px;padding:8px 10px}
+    #simpleCard .g3 span{display:block;font-size:12px;color:var(--mut)}
+    #simpleCard .g3 b{font-size:22px}`;
+    document.head.appendChild(st);
+    const card = document.createElement("div"); card.className = "card"; card.id = "simpleCard";
+    card.innerHTML = `<div class="small mut">Pròxim punt</div><div class="nm" id="spNom">—</div>
+      <div class="big" id="spEta">--:--</div><div class="small mut">hora d'arribada estimada</div>
+      <div class="g3"><div><b id="spKm">--</b><span>falten</span></div><div><b id="spDelay">--</b><span>respecte al pla</span></div>
+      <div><b id="spLlum">--</b><span>fins a lloc segur</span></div><div><b id="spPosta">--</b><span>fins a la posta</span></div></div>
+      <div class="campRow" style="margin:12px 0 0"><button class="btn ac" id="spGps">Activar GPS</button></div>
+      <p class="small mut" style="margin:8px 0 0" id="spNota"></p>`;
+    ara.insertBefore(card, document.getElementById("alerts").nextSibling);
+    const row = document.createElement("div"); row.className = "campRow vistaRow";
+    row.innerHTML = `<button class="btn sm" id="spToggle"></button>`;
+    ara.appendChild(row);
+    let simple = store.get("vistaSimple", true);
+    const aplica = () => { ara.classList.toggle("simple", simple); document.getElementById("spToggle").textContent = simple ? "Veure totes les dades" : "Vista simple"; store.set("vistaSimple", simple); };
+    document.getElementById("spToggle").onclick = () => { simple = !simple; aplica(); };
+    document.getElementById("spGps").onclick = () => document.getElementById("gpsBtn").click();
+    aplica();
+    const t = id => (document.getElementById(id) || {}).textContent || "--";
+    setInterval(() => {
+      const nb = document.getElementById("nextBody"), kv = nb ? nb.querySelectorAll(".kv b") : [];
+      const hd = nb && nb.querySelector(".hd");
+      document.getElementById("spNom").textContent = hd ? hd.textContent.trim() : "Marca l'últim punt o activa el GPS";
+      document.getElementById("spKm").textContent = kv[0] ? kv[0].textContent : "--";
+      document.getElementById("spEta").textContent = kv[2] ? kv[2].textContent : "--:--";
+      const d = document.getElementById("delay"), sd = document.getElementById("spDelay");
+      sd.textContent = d ? d.textContent : "--"; sd.className = d ? d.className : "";
+      document.getElementById("spLlum").textContent = t("safeLeft"); document.getElementById("spPosta").textContent = t("sunLeft");
+      document.getElementById("spGps").textContent = t("gpsBtn");
+      document.getElementById("spNota").textContent = kv[0] ? "" : "Sense posició: marca a «Punts» l'últim punt per on heu passat.";
+    }, 1000);
+  })();
 })();
