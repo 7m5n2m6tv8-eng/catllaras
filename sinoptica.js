@@ -66,7 +66,7 @@ const sino = (() => {
         g.cc.push(ag.map(a => R(a.hourly.cloud_cover[i], 1)));
         g.pr.push(ag.map(a => { const h = a.hourly.precipitation; return R((h[i] || 0) + (h[i - 1] || 0) + (h[i - 2] || 0), 10); }));
       });
-      const nou = {ts: Date.now(), t: ix.map(i => T[i]), g, loc: {t: al[0].hourly.time, pts: al.map(a => a.hourly)}};
+      const nou = {ts: Date.now(), t: ix.map(i => T[i]), el: ag.map(a => Math.round(a.elevation || 0)), g, loc: {t: al[0].hourly.time, pts: al.map(a => a.hourly)}};
       const tSel = DATA && step >= 0 && step < DATA.t.length ? DATA.t[step] : null;
       DATA = nou; cache = {s: -1};
       try { localStorage.setItem("catll_" + KEY, JSON.stringify(DATA)); } catch (e) { estat(`<span class="warn">No s'ha pogut desar al mòbil (memòria plena): només es veurà mentre l'app estigui oberta.</span>`); }
@@ -184,7 +184,8 @@ const sino = (() => {
       const [dx, dy] = kmCell(latU(y)), i = y * w + x; if (!(G[i] > 0.05)) continue;
       F[i] = -(((G[i + 1] - G[i - 1]) / (2 * dx) * 100) * gx[i] + ((G[i + w] - G[i - w]) / (2 * dy) * 100) * gy[i]) / G[i];
     }
-    const mask = new Uint8Array(w * h); for (let y = 0; y < h - 1; y++) for (let x = 0; x < w - 1; x++) { const i = y * w + x; if ((G[i] + G[i + 1] + G[i + w] + G[i + w + 1]) / 4 >= GMIN) mask[i] = 1; }
+    const EL = DATA.el ? blur(up(Float32Array.from(DATA.el)), 2) : null; // relleu: on 850 hPa (~1500 m) és sota terra la T és extrapolada
+    const mask = new Uint8Array(w * h); for (let y = 0; y < h - 1; y++) for (let x = 0; x < w - 1; x++) { const i = y * w + x; if ((G[i] + G[i + 1] + G[i + w] + G[i + w + 1]) / 4 >= GMIN && !(EL && Math.max(EL[i], EL[i + 1], EL[i + w], EL[i + w + 1]) > 1100)) mask[i] = 1; }
     const samp = (A, x, y) => { const x0 = Math.max(0, Math.min(w - 2, Math.floor(x))), y0 = Math.max(0, Math.min(h - 2, Math.floor(y))), tx = x - x0, ty = y - y0; return A[y0 * w + x0] * (1 - tx) * (1 - ty) + A[y0 * w + x0 + 1] * tx * (1 - ty) + A[(y0 + 1) * w + x0] * (1 - tx) * ty + A[(y0 + 1) * w + x0 + 1] * tx * ty; };
     const out = [];
     for (const pts of chain(contour(F, 0, mask))) {
@@ -194,6 +195,7 @@ const sino = (() => {
       for (const [x, y] of pts) { const g1 = samp(G, x, y) || 1e-6, ex = samp(gx, x, y) / g1, ey = samp(gy, x, y) / g1; adv += samp(Uu, x, y) * ex + samp(Vu, x, y) * ey; nx += ex; ny += ey; gm += g1; }
       adv /= pts.length; gm /= pts.length; const nn = Math.hypot(nx, ny) || 1; nx /= nn; ny /= nn;
       const tipus = adv > 6 ? "freda" : adv < -6 ? "càlida" : "estacionari", sg = adv >= 0 ? 1 : -1;
+      if (tipus === "estacionari" && (gm < 2.2 || len < 20)) continue; // els estacionaris febles són soroll
       out.push({tipus, pts, mx: nx * sg, my: ny * sg, adv, gm, len});
     }
     return out;
@@ -313,7 +315,7 @@ const sino = (() => {
   function llegenda() {
     const el = $("#sinoLeg"); if (!el) return;
     const sw = (col, txt) => `<span><i style="border-color:${col}"></i>${txt}</span>`;
-    let h = sw("#4a5d85", "isòbara cada 4 hPa (gruixuda cada 20)") + `<span><b style="color:#1a4fb5">A</b> anticicló · <b style="color:#c62828">D</b> depressió (hPa)</span>` +
+    let h = sw("#4a5d85", "isòbara cada 4 hPa (gruixuda cada 20)") + `<span><b style="color:#1a4fb5">A</b>&nbsp;anticicló · <b style="color:#c62828">D</b>&nbsp;depressió (hPa)</span>` +
       sw("#1f5fd0", "front fred ▲") + sw("#d03030", "front càlid ●") + sw("#8a3fb0", "estacionari") + `<span>→ vent a 850 hPa (~1500 m), cap on va</span><span>★ Catllaràs</span>`;
     const g = (a, b, txt) => `<span style="flex-basis:100%">${txt}: <i style="display:inline-block;width:110px;height:9px;border:0;vertical-align:middle;background:linear-gradient(90deg,${a.join(",")})"></i> ${b}</span>`;
     if (pref.capa === "cc") h += g(["rgba(70,82,100,0)", "rgba(70,82,100,.6)"], "0 → 100 % de cel cobert", "Núvols");
@@ -359,13 +361,14 @@ const sino = (() => {
       if (T[i] == null || T[i - 12] == null) continue;
       const dT = T[i] - T[i - 12], dd = Dd[i] != null && Dd[i - 12] != null ? adiff(Dd[i], Dd[i - 12]) : NaN;
       const tipus = dT <= -3.5 ? "freda" : dT >= 3.5 ? "càlida" : null; if (!tipus) continue;
+      let wmx = 0; for (let k = i - 12; k <= i; k++) wmx = Math.max(wmx, DATA.loc.pts[1].wind_speed_850hPa[k] || 0);
       const last = ev[ev.length - 1];
-      if (last && last.tipus === tipus && i - last.fi <= 6) { last.fi = i; if (Math.abs(dT) > Math.abs(last.dT)) { last.dT = dT; last.dd = dd; } continue; }
-      ev.push({tipus, i0: i - 12, fi: i, dT, dd});
+      if (last && last.tipus === tipus && i - last.fi <= 6) { last.fi = i; last.wmx = Math.max(last.wmx, wmx); if (Math.abs(dT) > Math.abs(last.dT)) { last.dT = dT; last.dd = dd; } continue; }
+      ev.push({tipus, i0: i - 12, fi: i, dT, dd, wmx});
     }
     return ev.map(e => {
       let best = e.i0 + 1, mx = 0; for (let i = e.i0 + 3; i <= e.fi; i++) { const d = Math.abs((T[i] ?? 0) - (T[i - 3] ?? 0)); if (d > mx) { mx = d; best = i; } }
-      return {...e, t: tm[best], tIni: tm[e.i0], tFi: tm[e.fi]};
+      return {...e, t: tm[best], tIni: tm[e.i0], tFi: tm[e.fi], front: e.wmx >= 20};
     });
   }
 
@@ -409,7 +412,7 @@ const sino = (() => {
     const Wd = 360, Ht = 280, ymax = 6000, Y = z => 260 - z / ymax * 240, Xt = t => 34 + (t + 32) / 52 * 190;
     let s = `<svg viewBox="0 0 ${Wd} ${Ht}" style="width:100%;max-width:460px;background:var(--card2);border-radius:10px" font-family="sans-serif" font-size="10">`;
     for (let z = 0; z <= ymax; z += 1000) s += `<line x1="34" x2="${Wd - 6}" y1="${Y(z)}" y2="${Y(z)}" stroke="var(--line)"/><text x="30" y="${Y(z) + 3}" text-anchor="end" fill="var(--mut)">${z / 1000} km</text>`;
-    s += `<rect x="34" y="${Y(PT[2].e)}" width="${Wd - 40}" height="${Y(PT[0].e) - Y(PT[2].e)}" fill="rgba(127,201,127,.22)"/><text x="${Wd - 8}" y="${Y(PT[2].e) - 2}" text-anchor="end" fill="var(--ok)">ruta 916–1563 m</text>`;
+    s += `<rect x="34" y="${Y(PT[2].e)}" width="${Wd - 40}" height="${Y(PT[0].e) - Y(PT[2].e)}" fill="rgba(127,201,127,.22)"/><text x="38" y="${Y(PT[2].e) - 3}" fill="var(--ok)">ruta 916–1563 m</text>`;
     if (isFinite(fz)) s += `<line x1="34" x2="${Wd - 6}" y1="${Y(fz)}" y2="${Y(fz)}" stroke="var(--blue)" stroke-dasharray="4 3"/><text x="38" y="${Y(fz) - 2}" fill="var(--blue)">0 °C a ${f0(Math.round(fz / 50) * 50)} m</text>`;
     s += `<line x1="${Xt(0)}" x2="${Xt(0)}" y1="20" y2="260" stroke="var(--blue)" stroke-opacity=".35"/>`;
     const pts = [[PT[1].e, ps[1].t]].concat(rows.slice().sort((a, b) => a.z - b.z).filter(r => r.z > PT[1].e + 50 && isFinite(r.t)).map(r => [r.z, r.t])).filter(p => isFinite(p[1]));
@@ -440,7 +443,7 @@ const sino = (() => {
     for (let v = Math.ceil(pmn / 4) * 4; v <= pmx; v += 4) svg += `<text x="31" y="${yp(v) + 3}" text-anchor="end" fill="#79b8ff">${v}</text>`;
     for (let v = Math.ceil(tmn / 4) * 4; v <= tmx; v += 4) svg += `<text x="${x1 + 4}" y="${yt(v) + 3}" fill="#ffb84d">${v}°</text>`;
     const cx = L.t.indexOf(DATA.t[s]); if (cx >= 0) svg += `<line x1="${xs(cx)}" x2="${xs(cx)}" y1="14" y2="154" stroke="var(--bad)" stroke-width="1.5"/>`;
-    for (const e of episodis()) svg += `<text x="${xs(L.t.indexOf(e.t))}" y="11" text-anchor="middle" font-size="12" fill="${e.tipus === "freda" ? "#79b8ff" : "#ff8a80"}">${e.tipus === "freda" ? "▲" : "●"}</text>`;
+    for (const e of episodis().filter(e => e.front)) svg += `<text x="${xs(L.t.indexOf(e.t))}" y="11" text-anchor="middle" font-size="12" fill="${e.tipus === "freda" ? "#79b8ff" : "#ff8a80"}">${e.tipus === "freda" ? "▲" : "●"}</text>`;
     svg += `<text x="${x0}" y="${H - 8}" fill="#79b8ff">— pressió al nivell del mar (hPa)</text><text x="${x0 + 150}" y="${H - 8}" fill="#ffb84d">— T a 850 hPa (°C)</text><text x="${x0 + 270}" y="${H - 8}" fill="#4a90e2">▮ pluja</text></svg>`;
     return svg + `<p class="small mut" style="margin:6px 0 0">Franja verda: dissabte 28 i diumenge 29. Línia vermella: l'hora del mapa. ▲ caiguda de T a 850 hPa (pas de front fred o aire més fred) · ● pujada (aire més càlid o front càlid).</p>`;
   }
@@ -462,8 +465,9 @@ const sino = (() => {
       if (isFinite(t8)) li_.push(`Aire a 850 hPa (~1500 m): <b>${f0(t8)} °C</b>${isFinite(t8a) ? ` (${t8 - t8a >= 0 ? "+" : ""}${f0(t8 - t8a)} °C respecte d'ahir)` : ""}, vent <b>${f0(w8)} km/h</b> del ${dirT(wd8)}. ${isFinite(t8a) && t8 - t8a <= -3 ? "Entra aire més fred." : isFinite(t8a) && t8 - t8a >= 3 ? "Entra aire més càlid." : "Massa d'aire similar a la del dia abans."}`);
       const dels = ev.filter(e => { const te = dateOf(e.t); te.setHours(+e.t.slice(11, 13) + 6); return isoD(te) === di; }); // de les 18 h del dia abans a les 18 h d'aquest dia
       if (dels.length) for (const e of dels) {
-        const gir = isFinite(e.dd) && Math.abs(e.dd) >= 25 ? `, amb gir del vent de ${f0(Math.abs(e.dd))}° cap a ${e.dd > 0 ? "la dreta (sentit horari)" : "l'esquerra"}` : "";
-        li_.push(`<b class="warn">${e.tipus === "freda" ? "Front fred (o canvi a aire més fred)" : "Front càlid (o canvi a aire més càlid)"}</b> cap a les <b>${e.t.slice(11, 13)} h del ${labL(e.t)}</b>: T a 850 hPa ${e.dT > 0 ? "+" : ""}${f0(e.dT)} °C en 12 h${gir}. ${e.tipus === "freda" ? "Sol portar vent fort, ruixats i baixada de la cota de neu, i després aclarida i fred." : "Sol portar núvols alts que engruixeixen, pluja feble contínua i cota de neu alta."}`);
+        const gir = isFinite(e.dd) && Math.abs(e.dd) >= 25 && e.front ? `, amb gir del vent de ${f0(Math.abs(e.dd))}° cap a ${e.dd > 0 ? "la dreta (sentit horari)" : "l'esquerra"}` : "", hora = `cap a les <b>${e.t.slice(11, 13)} h del ${labL(e.t)}</b>`, dt = `T a 850 hPa ${e.dT > 0 ? "+" : ""}${f0(e.dT)} °C en 12 h`;
+        if (e.front) li_.push(`<b class="warn">${e.tipus === "freda" ? "Front fred (o entrada d'aire més fred)" : "Front càlid (o entrada d'aire més càlid)"}</b> ${hora}: ${dt}${gir}. ${e.tipus === "freda" ? "Sol portar vent fort, ruixats i baixada de la cota de neu, i després aclarida i fred." : "Sol portar núvols alts que engruixeixen, pluja feble contínua i cota de neu alta."}`);
+        else li_.push(`${e.tipus === "freda" ? "Refredament" : "Escalfament"} lent de l'aire ${hora}: ${dt}, amb vent fluix a 850 hPa. Canvi de massa d'aire sense front clar.`);
       }
       else li_.push("Cap front clar al Xalet aquest dia (la temperatura a 850 hPa no canvia de forma brusca).");
       const n9 = nuvols(li(di + "T09:00")), n15 = nuvols(li(di + "T15:00"));
