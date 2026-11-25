@@ -201,7 +201,10 @@
     #ov{overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}
     #sinoCv{touch-action:pan-y}
     .mapGuard{height:34px;margin:6px 0 0;border-radius:10px;background:var(--card2);color:var(--mut);font-size:13px;display:flex;align-items:center;justify-content:center;touch-action:pan-y}
-    body.ovOn{overflow:hidden}`;
+    body.ovOn{overflow:hidden;position:fixed;width:100%}
+    #ov{inset:auto;top:0;left:0;right:0;height:100%;height:100dvh;overflow-x:hidden}
+    #ov td,#ov th,#ov .pg,#ov li,#ov p{overflow-wrap:anywhere}
+    #ov .seg button{touch-action:manipulation}`;
     document.head.appendChild(st);
     const mw = document.getElementById("mapwrap");
     if (mw) { const g = document.createElement("div"); g.className = "mapGuard"; g.textContent = "↕ Llisca aquí per moure la pàgina (el mapa captura el dit)"; mw.parentNode.insertBefore(g, mw.nextSibling); }
