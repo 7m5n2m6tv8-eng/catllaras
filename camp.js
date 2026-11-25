@@ -192,4 +192,20 @@
       document.getElementById("spNota").textContent = kv[0] ? "" : "Sense posició: marca a «Punts» l'últim punt per on heu passat.";
     }, 1000);
   })();
+
+  // ---------- Desplaçament amb el dit al mòbil ----------
+  (() => {
+    const st = document.createElement("style");
+    st.textContent = `html,body{overflow-x:hidden;overscroll-behavior-x:none}
+    .card{overflow-x:auto;overscroll-behavior-x:contain}
+    #ov{overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}
+    #sinoCv{touch-action:pan-y}
+    .mapGuard{height:34px;margin:6px 0 0;border-radius:10px;background:var(--card2);color:var(--mut);font-size:13px;display:flex;align-items:center;justify-content:center;touch-action:pan-y}
+    body.ovOn{overflow:hidden}`;
+    document.head.appendChild(st);
+    const mw = document.getElementById("mapwrap");
+    if (mw) { const g = document.createElement("div"); g.className = "mapGuard"; g.textContent = "↕ Llisca aquí per moure la pàgina (el mapa captura el dit)"; mw.parentNode.insertBefore(g, mw.nextSibling); }
+    const ovEl = document.getElementById("ov");
+    if (ovEl) new MutationObserver(() => document.body.classList.toggle("ovOn", ovEl.classList.contains("on"))).observe(ovEl, { attributes: true, attributeFilter: ["class"] });
+  })();
 })();
