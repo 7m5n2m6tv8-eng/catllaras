@@ -3,9 +3,7 @@
 (() => {
   const css = document.createElement("style");
   css.textContent = `
-  #ov{position:fixed;inset:0;z-index:50;background:var(--bg);color:var(--tx);overflow:auto;padding:12px 12px 90px;display:none}
-  #ov.on{display:block}
-  #ov .bar{position:sticky;top:-12px;background:var(--bg);padding:8px 0;display:flex;gap:8px;align-items:center;z-index:2}
+  #ov .bar{padding:4px 0 8px;display:flex;gap:8px;align-items:center}
   #ov .bar b{flex:1;font-size:17px}
   #ov h3{margin:14px 0 4px;font-size:15px}
   #ov table{width:100%;border-collapse:collapse;font-size:14px}
@@ -19,8 +17,17 @@
   `;
   document.head.appendChild(css);
 
-  const ov = document.createElement("div"); ov.id = "ov"; document.body.appendChild(ov);
-  const close = () => { ov.classList.remove("on"); ov.innerHTML = ""; };
+  const sec = document.createElement("section"); sec.id = "s-ov"; document.querySelector("main").appendChild(sec);
+  const ov = document.createElement("div"); ov.id = "ov"; sec.appendChild(ov);
+  let prev = "s-ara", actiu = false;
+  const restore = () => {
+    if (!actiu) return; actiu = false; ov.innerHTML = "";
+    document.querySelectorAll("main section").forEach(x => x.classList.toggle("act", x.id === prev));
+    if (prev === "s-mapa" && typeof mapa !== "undefined") mapa.mostra();
+    window.scrollTo(0, 0);
+  };
+  const close = () => { if (actiu && history.state && history.state.ov) history.back(); else restore(); };
+  window.addEventListener("popstate", restore);
   let ovDay = 1;
   const dayName = d => d === 1 ? "Dia 1 · dissabte 28/11" : "Dia 2 · diumenge 29/11";
   const bar = (titol, ambDia) => `<div class="bar"><b>${titol}</b>${ambDia ? `<div class="seg" style="margin:0;width:150px"><button data-od="1" class="${ovDay === 1 ? "on" : ""}">D1</button><button data-od="2" class="${ovDay === 2 ? "on" : ""}">D2</button></div>` : ""}<button class="btn sm" id="ovX">Tancar</button></div>`;
@@ -66,12 +73,18 @@
   function obre(kind, d) {
     ovDay = d || ovDay;
     ov.innerHTML = kind === "guio" ? guio(ovDay) : briefing(ovDay);
-    ov.dataset.kind = kind; ov.classList.add("on"); ov.scrollTop = 0;
+    ov.dataset.kind = kind;
+    if (!actiu) {
+      const cur = document.querySelector("main section.act"); prev = cur ? cur.id : "s-ara"; actiu = true;
+      document.querySelectorAll("main section").forEach(x => x.classList.toggle("act", x.id === "s-ov"));
+      try { history.pushState({ ov: 1 }, ""); } catch (e) {}
+    }
+    window.scrollTo(0, 0);
   }
   ov.addEventListener("click", e => {
     if (e.target.id === "ovX") return close();
     const od = e.target.closest("[data-od]"); if (od) return obre(ov.dataset.kind, +od.dataset.od);
-    if (e.target.closest("[data-tema]")) close(); // el gestor global obre el tema a Info
+    if (e.target.closest("[data-tema]")) restore(); // el gestor global obre el tema a Info
     if (e.target.id === "briefShare") {
       const t = briefTxt(ovDay);
       if (navigator.share) navigator.share({ title: "Briefing Catllaràs", text: t }).catch(() => {});
@@ -196,19 +209,10 @@
   // ---------- Desplaçament amb el dit al mòbil ----------
   (() => {
     const st = document.createElement("style");
-    st.textContent = `html,body{overflow-x:hidden;overscroll-behavior-x:none}
-    .card{overflow-x:auto;overscroll-behavior-x:contain}
-    #ov{overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}
-    #sinoCv{touch-action:pan-y}
-    .mapGuard{height:34px;margin:6px 0 0;border-radius:10px;background:var(--card2);color:var(--mut);font-size:13px;display:flex;align-items:center;justify-content:center;touch-action:pan-y}
-    body.ovOn{overflow:hidden;position:fixed;width:100%}
-    #ov{inset:auto;top:0;left:0;right:0;height:100%;height:100dvh;overflow-x:hidden}
-    #ov td,#ov th,#ov .pg,#ov li,#ov p{overflow-wrap:anywhere}
-    #ov .seg button{touch-action:manipulation}`;
+    st.textContent = `#sinoCv{touch-action:pan-y}
+    .mapGuard{height:34px;margin:6px 0 0;border-radius:10px;background:var(--card2);color:var(--mut);font-size:13px;display:flex;align-items:center;justify-content:center;touch-action:pan-y}`;
     document.head.appendChild(st);
     const mw = document.getElementById("mapwrap");
     if (mw) { const g = document.createElement("div"); g.className = "mapGuard"; g.textContent = "↕ Llisca aquí per moure la pàgina (el mapa captura el dit)"; mw.parentNode.insertBefore(g, mw.nextSibling); }
-    const ovEl = document.getElementById("ov");
-    if (ovEl) new MutationObserver(() => document.body.classList.toggle("ovOn", ovEl.classList.contains("on"))).observe(ovEl, { attributes: true, attributeFilter: ["class"] });
   })();
 })();
