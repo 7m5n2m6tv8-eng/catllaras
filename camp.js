@@ -37,18 +37,55 @@
   const dayName = d => d === 1 ? "Dia 1 · dissabte 28/11" : "Dia 2 · diumenge 29/11";
   const bar = (titol, ambDia) => `<div class="bar"><b>${titol}</b>${ambDia ? `<div class="seg" style="margin:0;width:150px"><button data-od="1" class="${ovDay === 1 ? "on" : ""}">D1</button><button data-od="2" class="${ovDay === 2 ? "on" : ""}">D2</button></div>` : ""}<button class="btn sm" id="ovX">Tancar</button></div>`;
 
+  // ---------- Criteris d'avaluació: què dir ----------
+  const AREA = { gaudi: "Història", mines: "Història", edatmitjana: "Història", despoblament: "Història", geologia: "Geologia", paleo: "Geologia", llegendes: "Curiositats", flora: "Flora", fauna: "Fauna", gallfer: "Fauna" };
+  const AREES = ["Fauna", "Flora", "Geologia", "Història", "Curiositats"];
+  const areesPunt = p => { const e = EXPLICAR[p.d + ":" + p.k]; const a = new Set(); (e && e.temes || []).forEach(id => AREA[id] && a.add(AREA[id])); const txt = ((e && e.i) || "").toLowerCase(); if (/gall fer|isard|cérvol|fauna/.test(txt)) a.add("Fauna"); if (/pi roig|fageda|boix|flora/.test(txt)) a.add("Flora"); return [...a]; };
+  const nomCurt = p => p.c + " " + p.n;
+  const oriLinia = (p, ps) => {
+    const i = ps.indexOf(p), ant = [...ps.slice(0, i)].reverse().find(x => !/a$/.test(x.k)), seg = ps.slice(i + 1).find(x => !/a$/.test(x.k));
+    const tr = p.tr ? ` · ${p.tr.km} km, ${p.tr.dz} m, ${p.tr.m.replace("h", " h ")} de marxa` : "";
+    return `<b>Orientació:</b> venim de ${ant ? esc(ant.n) : "—"} · som a ${esc(p.n)} (${p.cota} m) · anem a ${seg ? esc(seg.n) + tr : "final d'etapa"} · hi som a les ${p.t}.`;
+  };
+  const extres = p => {
+    const x = [];
+    if (p.d === 1 && p.k === "P0") x.push("<b>Presentació:</b> qui sóc (nom, titulació, rol) · qui és el grup (nom i limitació de cadascú) · d'on venim, on som, on anem, desnivell, distància, horari, mapa i entorn.", "<b>Material:</b> revisar roba, calçat, aigua i menjar, ulleres i protecció solar, frontal; dir què porta el guia (farmaciola, corda i elements de seguretat). Tothom porta el material adequat.", "<b>Organització:</b> anomenar el tancador, l'ordre de marxa i la distància entre persones; preguntar per l'estat físic i emocional.", "<b>Perills (avís):</b> pas equipat a P5 i res d'entrar a bocamines.");
+    if (p.d === 1 && p.k === "P1") x.push("<b>Primera parada per roba:</b> si encara no s'ha fet, ara (treure o posar capes, ajustar motxilles).");
+    if (p.k === "P3" && p.d === 1 || p.k === "P11") x.push("<b>Parada:</b> aigua, WC i menjar; lloc adequat i adaptat al grup. Si es deixa el grup en un punt (bucle lleuger, mirador), aprofitar-ho per descansar o explicar i deixar-hi algú responsable.");
+    if (p.pas) x.push("<b>Perills en tres temps:</b> 1) indicar el perill abans d'arribar · 2) actuar: d'un en un i assegurar amb corda; si la roca està mullada o glaçada, B1 · 3) buscar feedback: «us veieu còmodes? algú vol canviar?».");
+    if (p.k === "P5a" || p.k === "P4a") x.push("<b>Perill:</b> no entrar ni treure el cap als pous ni a les bocamines.");
+    if (p.d === 2 && p.k === "P6") x.push("<b>Briefing del D2:</b> horari, ritme, estat físic i emocional (preguntar-ho un per un), material de la jornada.");
+    if (p.k === "P0e") x.push("<b>Tancament:</b> repàs de la sortida, feedback del grup i recompte final.");
+    x.push("<b>Organització:</b> compte visual del grup (dir «us compto»), tancador al seu lloc, distància segons el terreny.");
+    return x;
+  };
+  const criterisResum = () => `<details class="pg"><summary><b>Criteris d'avaluació: què dir en cada moment</b></summary><div class="small">
+    <p><b>Frase tipus a cada punt (15 s):</b> «Venim de ___, som a ___ (ho assenyalo al mapa), anem a ___, falten ___ km i ___ m, hi arribarem cap a les ___. Ens espera ___ (terreny o perill).» Cobreix orientació, desnivell, distància, horari, mapa i entorn. Fer servir el mòbil o el GPS davant del grup i dir-ho.</p>
+    <p><b>Parades:</b> primera per roba als 10–15 min · aigua, WC i menjar cada hora aprox. · lloc adequat · adaptada al grup · explicar només en parades sense fred.</p>
+    <p><b>Organització:</b> tancador anomenat · ordre adequat · preguntar l'estat físic i emocional · control visual · protegir el grup si cal · corda si cal · distància entre persones segons el terreny · indicacions clares davant dificultats o canvis.</p>
+    <p><b>Perills:</b> indicar-los · actuar segons el perill · buscar feedback.</p>
+    <p><b>Material:</b> roba, calçat, farmaciola i frontal, ulleres i protecció solar, corda i elements de seguretat, aigua i menjar, tothom el porta.</p>
+    <p><b>Explicacions:</b> fauna, flora, geologia, història i altres curiositats, adequades i encertades; si no està contrastat, dir-ho.</p></div></details>`;
+  const cobertura = pts => {
+    const tot = new Set(); pts.forEach(p => areesPunt(p).forEach(a => tot.add(a)));
+    const falta = AREES.filter(a => !tot.has(a));
+    return `<div class="pg"><b>Explicacions del dia:</b> ${AREES.map(a => `<span class="${tot.has(a) ? "ok" : "warn"}">${a}${tot.has(a) ? " ✓" : " ✗"}</span>`).join(" · ")}${falta.length ? `<p class="small warn" style="margin:6px 0 0">Falta cobrir ${falta.join(" i ")}: aprofita una parada al bosc (flora) o un tros de carena (fauna, gall fer) per dir-ho amb prudència.</p>` : ""}</div>`;
+  };
+
   function guio(d) {
     const idees = (TEMES.find(t => t.id === "idees") || {}).llista || [];
     const pts = PTS.filter(p => p.d === d);
     const fil = d === 1
       ? `<div class="pg"><h3 style="margin-top:0">Fil del dia</h3><ul style="margin:4px 0 0;padding-left:18px">${idees.map(x => `<li class="small">${esc(x)}</li>`).join("")}</ul><p class="q small"><b>Pregunta que obre el dia:</b> «Per què hi ha una casa de Gaudí a dalt d'una serra?» Es respon al final del D2.</p></div>`
       : `<div class="pg"><h3 style="margin-top:0">Fil del dia</h3><p class="small" style="margin:4px 0 0">Ahir: mines, Güell i el Xalet. Avui: la serra com a lloc viscut (masies, pastures, despoblament), el bosc i el gall fer, i el tancament amb la pregunta inicial.</p></div>`;
-    return bar("Què explicarem · " + dayName(d), true) + fil + pts.map(p => {
+    return bar("Què explicarem · " + dayName(d), true) + criterisResum() + cobertura(pts) + fil + pts.map(p => {
       const e = EXPLICAR[d + ":" + p.k] || (p.i ? { i: p.i } : null);
       const tm = e && e.temes ? e.temes.filter(id => TEMA[id]).map(id => `<button class="temabtn" data-tema="${id}">${esc(TEMA[id].t)} →</button>`).join("") : "";
       return `<div class="pg"><div class="hd"><span class="code">${p.c}</span><b>${esc(p.n)}</b><span class="hr">${p.t}</span></div>
-        <div class="small mut">${p.cota} m${p.km ? " · km " + p.km : ""}</div>
-        ${e ? `<div class="small" style="margin-top:6px">${esc(e.i)}</div>${e.q ? `<p class="q small"><b>Pregunta:</b> ${esc(e.q)}</p>` : ""}${tm}` : `<div class="small mut">Sense text d'interpretació.</div>`}</div>`;
+        <div class="small mut">${p.cota} m${p.km ? " · km " + p.km : ""}${areesPunt(p).length ? " · " + areesPunt(p).join(", ") : ""}</div>
+        <div class="small" style="margin-top:6px">${oriLinia(p, pts)}</div>
+        ${e ? `<div class="small" style="margin-top:6px"><b>Explicar:</b> ${esc(e.i)}</div>${e.q ? `<p class="q small"><b>Pregunta:</b> ${esc(e.q)}</p>` : ""}${tm}` : `<div class="small mut">Sense text d'interpretació.</div>`}
+        <ul class="small" style="margin:6px 0 0;padding-left:18px">${extres(p).map(t => `<li>${t}</li>`).join("")}</ul></div>`;
     }).join("");
   }
 
