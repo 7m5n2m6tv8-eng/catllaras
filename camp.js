@@ -4,6 +4,8 @@
   const css = document.createElement("style");
   css.textContent = `
   #ov .bar{padding:4px 0 8px;display:flex;gap:8px;align-items:center}
+  #ovFix{position:fixed;left:0;right:0;bottom:calc(62px + env(safe-area-inset-bottom));z-index:40;display:none;gap:8px;padding:8px 12px;background:var(--bg);border-top:1px solid var(--line);align-items:center}
+  #ovFix .seg button{padding:12px 8px}#ovFix .btn{padding:12px 16px}
   #ov .bar b{flex:1;font-size:17px}
   #ov h3{margin:14px 0 4px;font-size:15px}
   #ov table{width:100%;border-collapse:collapse;font-size:14px}
@@ -19,15 +21,18 @@
 
   const sec = document.createElement("section"); sec.id = "s-ov"; document.querySelector("main").appendChild(sec);
   const ov = document.createElement("div"); ov.id = "ov"; sec.appendChild(ov);
+  const fix = document.createElement("div"); fix.id = "ovFix"; document.body.appendChild(fix);
+  const pintaFix = () => { fix.innerHTML = `<div class="seg" style="margin:0;flex:1"><button data-od="1" class="${ovDay === 1 ? "on" : ""}">Dia 1</button><button data-od="2" class="${ovDay === 2 ? "on" : ""}">Dia 2</button></div><button class="btn ac" id="ovX2">✕ Tancar</button>`; };
   let prev = "s-ara", actiu = false;
   const restore = () => {
-    if (!actiu) return; actiu = false; ov.innerHTML = "";
+    if (!actiu) return; actiu = false; ov.innerHTML = ""; fix.style.display = "none";
     document.querySelectorAll("main section").forEach(x => x.classList.toggle("act", x.id === prev));
     if (prev === "s-mapa" && typeof mapa !== "undefined") mapa.mostra();
     window.scrollTo(0, 0);
   };
   const close = () => { if (actiu && history.state && history.state.ov) history.back(); else restore(); };
   window.addEventListener("popstate", restore);
+  document.querySelectorAll("#nav button").forEach(b => b.addEventListener("click", () => { if (actiu) { actiu = false; ov.innerHTML = ""; fix.style.display = "none"; } }));
   let ovDay = 1;
   const dayName = d => d === 1 ? "Dia 1 · dissabte 28/11" : "Dia 2 · diumenge 29/11";
   const bar = (titol, ambDia) => `<div class="bar"><b>${titol}</b>${ambDia ? `<div class="seg" style="margin:0;width:150px"><button data-od="1" class="${ovDay === 1 ? "on" : ""}">D1</button><button data-od="2" class="${ovDay === 2 ? "on" : ""}">D2</button></div>` : ""}<button class="btn sm" id="ovX">Tancar</button></div>`;
@@ -73,7 +78,7 @@
   function obre(kind, d) {
     ovDay = d || ovDay;
     ov.innerHTML = kind === "guio" ? guio(ovDay) : briefing(ovDay);
-    ov.dataset.kind = kind;
+    ov.dataset.kind = kind; pintaFix(); fix.style.display = "flex";
     if (!actiu) {
       const cur = document.querySelector("main section.act"); prev = cur ? cur.id : "s-ara"; actiu = true;
       document.querySelectorAll("main section").forEach(x => x.classList.toggle("act", x.id === "s-ov"));
@@ -81,8 +86,8 @@
     }
     window.scrollTo(0, 0);
   }
-  ov.addEventListener("click", e => {
-    if (e.target.id === "ovX") return close();
+  const onClick = e => {
+    if (e.target.id === "ovX" || e.target.id === "ovX2") return close();
     const od = e.target.closest("[data-od]"); if (od) return obre(ov.dataset.kind, +od.dataset.od);
     if (e.target.closest("[data-tema]")) restore(); // el gestor global obre el tema a Info
     if (e.target.id === "briefShare") {
@@ -90,7 +95,8 @@
       if (navigator.share) navigator.share({ title: "Briefing Catllaràs", text: t }).catch(() => {});
       else if (navigator.clipboard) navigator.clipboard.writeText(t).then(() => { e.target.textContent = "Copiat"; });
     }
-  });
+  };
+  ov.addEventListener("click", onClick); fix.addEventListener("click", onClick);
 
   // botons a «Ara»
   const ara = document.getElementById("s-ara");
