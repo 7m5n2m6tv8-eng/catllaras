@@ -193,7 +193,7 @@ const mapa = (() => {
   function actualitzaRumb() {
     if (!gps) { hdg = null; hdgSrc = ""; lastMove = null; mvH = null; return; }
     if (!lastMove) lastMove = {lat: gps.lat, lon: gps.lon};
-    else if (hav(lastMove.lat, lastMove.lon, gps.lat, gps.lon) >= Math.max(10, gps.acc * .6)) { mvH = bearing(lastMove.lat, lastMove.lon, gps.lat, gps.lon); mvT = Date.now(); lastMove = {lat: gps.lat, lon: gps.lon}; }
+    else if (hav(lastMove.lat, lastMove.lon, gps.lat, gps.lon) >= Math.max(15, gps.acc)) { mvH = bearing(lastMove.lat, lastMove.lon, gps.lat, gps.lon); mvT = Date.now(); lastMove = {lat: gps.lat, lon: gps.lon}; }
     const mou = gps.hdg != null && isFinite(gps.hdg) && (gps.spd == null || gps.spd >= .7);
     if (mou) { hdg = gps.hdg; hdgSrc = "GPS"; }
     else if (mvH !== null && Date.now() - mvT < 45000) { hdg = mvH; hdgSrc = "GPS"; }
@@ -350,6 +350,7 @@ const mapa = (() => {
   }
 
   return {
+    bruixola() { engegaBruixola(); },
     init() {
       cv = $("#mapcv"); ctx = cv.getContext("2d");
       const v = store.get("mapView", null); if (v) { [cLat, cLon, Z] = v; if (v[3] != null && mode !== "nord") setRot(v[3]); }
