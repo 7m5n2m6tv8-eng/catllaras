@@ -225,10 +225,9 @@ const mapa = (() => {
   function engegaBruixola() { // s'ha de cridar des d'un toc de l'usuari (iPhone demana permís)
     if (oriOn) return;
     const go = () => { oriOn = true; window.addEventListener("deviceorientationabsolute", onOri, true); window.addEventListener("deviceorientation", onOri, true); };
-    try {
-      if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function") DeviceOrientationEvent.requestPermission().then(r => { if (r === "granted") go(); }).catch(() => {});
-      else if ("DeviceOrientationEvent" in window) go();
-    } catch (e) {}
+    // s'escolta sempre; si el navegador demana permís (iPhone i Chrome recents), es demana a part
+    try { if ("DeviceOrientationEvent" in window) go(); } catch (e) {}
+    try { if (typeof DeviceOrientationEvent.requestPermission === "function") DeviceOrientationEvent.requestPermission().catch(() => {}); } catch (e) {}
   }
   function estatMapa() {
     const r = hdg !== null ? ` · rumb ${Math.round(hdg)}° ${CARD[Math.round(hdg / 45) % 8]} (${hdgSrc})` : (mode === "rumb" ? " · camina uns metres per veure el rumb" : "");
