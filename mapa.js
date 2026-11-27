@@ -208,11 +208,15 @@ const mapa = (() => {
   function onOri(e) {
     let h = null;
     if (e.webkitCompassHeading != null) h = e.webkitCompassHeading; // iPhone: ja és respecte al nord
-    else if (e.absolute && e.alpha != null) { // Android: brúixola amb inclinació (exemple del W3C)
-      const k = Math.PI / 180, x = (e.beta || 0) * k, y = (e.gamma || 0) * k, z = e.alpha * k, cY = Math.cos(y), cZ = Math.cos(z), sX = Math.sin(x), sY = Math.sin(y), sZ = Math.sin(z);
-      const Vx = -cZ * sY - sZ * sX * cY, Vy = -sZ * sY + cZ * sX * cY; h = Math.atan(Vx / Vy); if (Vy < 0) h += Math.PI; else if (Vx < 0) h += 2 * Math.PI; h /= k;
+    else if (e.absolute && e.alpha != null) { // Android: rumb de la part de dalt del mòbil; si està dret, cap on mira la càmera
+      const k = Math.PI / 180, sA = Math.sin(e.alpha * k), cA = Math.cos(e.alpha * k), sB = Math.sin((e.beta || 0) * k), cB = Math.cos((e.beta || 0) * k), sG = Math.sin((e.gamma || 0) * k), cG = Math.cos((e.gamma || 0) * k);
+      let ex = -sA * cB, ny = cA * cB;                                   // part de dalt (mòbil pla o inclinat)
+      if (Math.abs(cB) < .5) { ex = -cA * sG - sA * sB * cG; ny = -sA * sG + cA * sB * cG; } // dret: direcció de la càmera
+      h = Math.atan2(ex, ny) / k;
     } else return;
-    h = (h + (screen.orientation ? screen.orientation.angle : 0) + 360) % 360;
+    if (!isFinite(h)) return;
+    h = (h + (screen.orientation ? screen.orientation.angle : 0) + 720) % 360;
+    if (compass !== null && !isFinite(compass)) compass = null;
     compass = compass === null ? h : (compass + nrm(h - compass) * .15 + 360) % 360;
     const t = Date.now(); if (t - oriT < 150) return; oriT = t;
     const mou = gps && gps.hdg != null && isFinite(gps.hdg) && (gps.spd == null || gps.spd >= .7), recent = mvH !== null && t - mvT < 45000;
